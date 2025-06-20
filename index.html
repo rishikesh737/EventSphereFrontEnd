@@ -100,8 +100,7 @@
 
     <script>
         // --- Configuration (REPLACE WITH YOUR AWS DETAILS) ---
-        // You MUST get these values from your AWS Cognito User Pool and API Gateway setup.
-        const AWS_REGION = 'us-east-1'; // Example: 'us-east-1', 'eu-west-1', etc.
+        const AWS_REGION = 'us-east-1'; // YOUR AWS region (e.g., 'us-east-1', 'ap-south-1')
         const COGNITO_USER_POOL_ID = 'us-east-1_XgyeAkGsm'; // YOUR User Pool ID
         const COGNITO_USER_POOL_CLIENT_ID = '7jlpbpk9964imvoa9s4mdagmm8'; // YOUR User Pool App Client ID
         const COGNITO_DOMAIN = 'eventsphere-yourname-app.auth.us-east-1.amazoncognito.com'; // YOUR Cognito Hosted UI Domain
@@ -112,10 +111,11 @@
 
         // IMPORTANT: These redirect URLs MUST be explicitly added to "Allowed callback URLs"
         // and "Allowed sign-out URLs" in your Cognito User Pool App Client settings.
-        // **FOR DEPLOYMENT:** You will replace 'http://localhost:8080/' with your actual HTTPS Amplify Hosting URL.
-        // For local testing (which might still give errors for Hosted UI redirects), use http://localhost:8080/
-        const REDIRECT_SIGN_IN_URL = 'http://localhost:8080/'; 
-        const REDIRECT_SIGN_OUT_URL = 'http://localhost:8080/'; 
+        // **FOR DEPLOYMENT, USE YOUR ACTUAL AMPLIFY HOSTING HTTPS URL.**
+        // For your deployment, use: https://main.d7icjcyxhs1jd.amplifyapp.com/
+        const REDIRECT_SIGN_IN_URL = 'https://main.d7icjcyxhs1jd.amplifyapp.com/'; 
+        const REDIRECT_SIGN_OUT_URL = 'https://main.d7icjcyxhs1jd.amplifyapp.com/'; 
+
 
 
         // --- Global State Variables ---
