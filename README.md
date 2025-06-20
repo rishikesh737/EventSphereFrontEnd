@@ -44,7 +44,7 @@ Stores:
 ---
 
 ## 🏗️ Architecture Diagram  
-![](https://github.com/rishikesh737/Event-Management-aws/blob/bc8e8998c80afb16fad9f66bdb7ed826000b30da/architecture-diagram.png)
+![Image](https://github.com/user-attachments/assets/12990d12-11bf-4161-b4f1-7c409bac1cbc)
 
 ---
 
