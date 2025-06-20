@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EventSphere - Simple Frontend</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Font: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background: linear-gradient(to bottom right, #8B5CF6, #3B82F6); /* Purple to Blue Gradient */
+            color: #E5E7EB; /* Light gray text */
+        }
+        #app-container {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 1rem;
+        }
+        .nav-btn {
+            background-color: rgba(255, 255, 255, 0.2);
+            color: white;
+            font-weight: 600;
+            padding: 0.5rem 1rem;
+            border-radius: 9999px; /* Rounded-full */
+            transition: all 0.2s ease-in-out;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+        }
+        .nav-btn:hover {
+            background-color: rgba(255, 255, 255, 0.3);
+            transform: scale(1.05);
+        }
+        .form-input, .form-textarea, .form-select {
+            width: 100%;
+            padding: 0.75rem;
+            border-radius: 0.5rem; /* rounded-lg */
+            background-color: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: #E5E7EB;
+            outline: none;
+            transition: all 0.2s ease-in-out;
+        }
+        .form-input::placeholder, .form-textarea::placeholder {
+            color: #A0AEC0; /* Gray-400 */
+        }
+        .form-input:focus, .form-textarea:focus, .form-select:focus {
+            border-color: #6366F1; /* Indigo-500 */
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.5); /* Ring-2 for focus */
+        }
+    </style>
+</head>
+<body>
+    <div id="app-container">
+        <!-- Navigation Bar -->
+        <nav class="bg-white bg-opacity-20 backdrop-filter backdrop-blur-lg rounded-full px-6 py-3 mb-8 shadow-lg flex justify-between items-center z-10 sticky top-4 max-w-7xl w-full">
+            <div class="flex items-center gap-3">
+                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-calendar text-white drop-shadow"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
+                <h1 class="text-3xl font-extrabold text-white drop-shadow-lg">EventSphere</h1>
+            </div>
+            <div class="flex items-center gap-4">
+                <button onclick="setView('home')" class="nav-btn" title="Home">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-home"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> <span class="hidden sm:inline">Home</span>
+                </button>
+                <div id="auth-buttons">
+                    <!-- Auth buttons will be rendered here by JS -->
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content Area -->
+        <main class="flex-grow flex items-start justify-center py-8 w-full max-w-5xl">
+            <div id="content-area" class="container mx-auto w-full">
+                <!-- Content will be rendered here by JS -->
+            </div>
+        </main>
+
+        <!-- Modal Overlay -->
+        <div id="modal-overlay" class="hidden fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
+            <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-md border border-gray-300">
+                <h3 id="modal-title" class="text-2xl font-bold mb-4 text-gray-900"></h3>
+                <p id="modal-message" class="text-gray-700 mb-6"></p>
+                <div class="flex justify-end gap-3">
+                    <button id="modal-cancel-btn" class="hidden px-5 py-2 rounded-lg bg-gray-300 text-gray-800 font-semibold hover:bg-gray-400 transition-colors">Cancel</button>
+                    <button id="modal-confirm-btn" class="px-5 py-2 rounded-lg font-semibold transition-colors bg-blue-500 text-white hover:bg-blue-600">OK</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Configuration (REPLACE WITH YOUR AWS DETAILS) ---
+        // You MUST get these values from your AWS Cognito User Pool and API Gateway setup.
+        const AWS_REGION = 'us-east-1'; // Example: 'us-east-1', 'eu-west-1', etc.
+        const COGNITO_USER_POOL_ID = 'us-east-1_XgyeAkGsm'; // YOUR User Pool ID
+        const COGNITO_USER_POOL_CLIENT_ID = '7jlpbpk9964imvoa9s4mdagmm8'; // YOUR User Pool App Client ID
+        const COGNITO_DOMAIN = 'eventsphere-yourname-app.auth.us-east-1.amazoncognito.com'; // YOUR Cognito Hosted UI Domain
+
+        // API Gateway URLs - These should be the Invoke URLs for your Lambda functions via API Gateway.
+        const API_GATEWAY_EVENTS_URL = 'https://r7z06t5m5h.execute-api.us-east-1.amazonaws.com/dev/events'; // YOUR API Gateway endpoint for GET/PUT/DELETE events
+        const API_GATEWAY_CREATE_EVENT_URL = 'https://r7z06t5m5h.execute-api.us-east-1.amazonaws.com/dev/createEvent'; // YOUR API Gateway endpoint for POST createEvent
+
+        // IMPORTANT: These redirect URLs MUST be explicitly added to "Allowed callback URLs"
+        // and "Allowed sign-out URLs" in your Cognito User Pool App Client settings.
+        // **FOR DEPLOYMENT:** You will replace 'http://localhost:8080/' with your actual HTTPS Amplify Hosting URL.
+        // For local testing (which might still give errors for Hosted UI redirects), use http://localhost:8080/
+        const REDIRECT_SIGN_IN_URL = 'http://localhost:8080/'; 
+        const REDIRECT_SIGN_OUT_URL = 'http://localhost:8080/'; 
+
+
+        // --- Global State Variables ---
+        let loggedInUser = null; 
+        let events = []; 
+        let currentEvent = null; 
+        let currentView = 'home'; 
+        let editingEventId = null; 
+        let form = { name: '', date: '', description: '', location: '', organizerId: '' }; 
+
+
+        // --- Helper Functions (UI & Data) ---
+
+        // Lucide Icons (as SVG strings)
+        const getIconSVG = (name, size = 20) => {
+            const icons = {
+                'login': `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-log-in"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" x2="3" y1="12" y2="12"/></svg>`,
+                'user-plus': `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-user-plus"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/></svg>`,
+                'settings': `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-settings"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.44.25a2 2 0 0 0-2 0L3.7 7.35a2 2 0 0 0-1 1.73v.44a2 2 0 0 1-1 1.73l-.44.25a2 2 0 0 0-2 0L.1 12.65a2 2 0 0 0 0 1.73l.44.25a2 2 0 0 1 1 1.73v.44a2 2 0 0 0 2 0l.44-.25a2 2 0 0 1 1.73 1L7.35 20.3a2 2 0 0 0 1.73 1v.44a2 2 0 0 1 2 2h.44a2 2 0 0 1 2-2v-.18a2 2 0 0 0 1-1.73l.44-.25a2 2 0 0 0 2 0L20.3 16.65a2 2 0 0 0 1-1.73v-.44a2 2 0 0 1 1-1.73l.44-.25a2 2 0 0 0 2 0L23.9 11.35a2 2 0 0 0 0-1.73l-.44-.25a2 2 0 0 1-1-1.73V7.35a2 2 0 0 0-2 0l-.44.25a2 2 0 0 1-1.73-1L16.65 3.7a2 2 0 0 0-1.73-1z"/><circle cx="12" cy="12" r="3"/></svg>`,
+                'user': `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-user"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`,
+                'home': `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-home"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>`,
+                'plus-circle': `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-plus-circle"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/><path d="M12 8v8"/></svg>`,
+                'edit': `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-edit"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4Z"/></svg>`,
+                'trash-2': `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-trash-2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>`,
+                'calendar': `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-calendar"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>`,
+                'file-text': `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-file-text"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>`,
+                'download': `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-download"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>`,
+                'qr-code': `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-qr-code"><rect width="8" height="8" x="2" y="2" rx="1"/><rect width="8" height="8" x="14" y="2" rx="1"/><rect width="8" height="8" x="2" y="14" rx="1"/><path d="M7 7h.01"/><path d="M19 7h.01"/><path d="M7 19h.01"/><path d="M17 17h.01"/><path d="M14 12v-2a2 2 0 0 1 2-2h2"/><path d="M14 14h.01"/><path d="M14 17h.01"/><path d="M17 14h.01"/><path d="M22 17h-4a2 2 0 0 0-2 2v4"/><path d="M12 22h.01"/><path d="M22 12v.01"/></svg>`,
+                'credit-card': `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-credit-card"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>`
+            };
+            return icons[name] || '';
+        };
+
+        // Custom Alert/Confirmation Modal (using direct DOM manipulation)
+        const modalOverlay = document.getElementById('modal-overlay');
+        const modalTitle = document.getElementById('modal-title');
+        const modalMessage = document.getElementById('modal-message');
+        const modalConfirmBtn = document.getElementById('modal-confirm-btn');
+        const modalCancelBtn = document.getElementById('modal-cancel-btn');
+
+        const showAlert = (title, message, onConfirmCallback = () => {}) => {
+            modalTitle.textContent = title;
+            modalMessage.textContent = message;
+            modalConfirmBtn.textContent = 'OK';
+            modalConfirmBtn.onclick = () => {
+                modalOverlay.classList.add('hidden');
+                onConfirmCallback();
+            };
+            modalCancelBtn.classList.add('hidden'); // Hide cancel button for alerts
+            modalConfirmBtn.classList.remove('bg-red-500', 'hover:bg-red-600'); // Ensure blue for OK
+            modalConfirmBtn.classList.add('bg-blue-500', 'hover:bg-blue-600');
+            modalOverlay.classList.remove('hidden');
+        };
+
+        const showConfirm = (title, message, onConfirmCallback = () => {}, onCancelCallback = () => {}) => {
+            modalTitle.textContent = title;
+            modalMessage.textContent = message;
+            modalConfirmBtn.textContent = 'Confirm';
+            modalConfirmBtn.onclick = () => {
+                modalOverlay.classList.add('hidden');
+                onConfirmCallback();
+            };
+            modalCancelBtn.textContent = 'Cancel';
+            modalCancelBtn.onclick = () => {
+                modalOverlay.classList.add('hidden');
+                onCancelCallback();
+            };
+            modalCancelBtn.classList.remove('hidden'); // Show cancel button for confirms
+            modalConfirmBtn.classList.remove('bg-blue-500', 'hover:bg-blue-600');
+            modalConfirmBtn.classList.add('bg-red-500', 'hover:bg-red-600'); // Red for Confirm
+            modalOverlay.classList.remove('hidden');
+        };
+
+        // Simple QR Code Generator (SVG based)
+        const generateQRCodeSVG = (text, size = 256) => {
+            // This is a placeholder for a real QR code.
+            // In a production app, you would use a JavaScript QR code library.
+            return `
+                <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" style="background-color:#fff;">
+                    <rect x="${size * 0.1}" y="${size * 0.1}" width="${size * 0.2}" height="${size * 0.2}" fill="#000"/>
+                    <rect x="${size * 0.7}" y="${size * 0.1}" width="${size * 0.2}" height="${size * 0.2}" fill="#000"/>
+                    <rect x="${size * 0.1}" y="${size * 0.7}" width="${size * 0.2}" height="${size * 0.2}" fill="#000"/>
+                    <text x="${size / 2}" y="${size / 2}" font-size="${size * 0.05}" fill="#000" text-anchor="middle" alignment-baseline="middle">QR Sim</text>
+                    <text x="${size / 2}" y="${size / 2 + size * 0.1}" font-size="${size * 0.03}" fill="#000" text-anchor="middle" alignment-baseline="middle">${text.substring(0, Math.min(text.length, 20))}...</text>
+                </svg>
+            `;
+        };
+
+        // --- Core UI Renderer ---
+        const renderUI = () => {
+            const contentArea = document.getElementById('content-area');
+            const authButtonsDiv = document.getElementById('auth-buttons');
+            authButtonsDiv.innerHTML = ''; // Clear existing buttons
+
+            // Render Auth Buttons in Navigation
+            if (loggedInUser) {
+                const roleButtonHTML = loggedInUser.role === 'organizer' ?
+                    `<button onclick="setView('organizerDashboard')" class="nav-btn" title="Organizer Dashboard">${getIconSVG('settings', 20)} <span class="hidden sm:inline">Organizer</span></button>` :
+                    `<button onclick="setView('attendeePortal')" class="nav-btn" title="Attendee Portal">${getIconSVG('user', 20)} <span class="hidden sm:inline">Attendee</span></button>`;
+                
+                authButtonsDiv.innerHTML = `
+                    ${roleButtonHTML}
+                    <span class="text-white text-sm hidden md:inline">Welcome, ${loggedInUser.email}</span>
+                    <button onclick="handleLogout()" class="nav-btn bg-red-500 hover:bg-red-600" title="Logout">
+                        ${getIconSVG('login', 20)} <span class="hidden sm:inline">Logout</span>
+                    </button>
+                `;
+            } else {
+                authButtonsDiv.innerHTML = `
+                    <button onclick="redirectToCognitoLogin()" class="nav-btn" title="Login">
+                        ${getIconSVG('login', 20)} <span class="hidden sm:inline">Login</span>
+                    </button>
+                    <button onclick="redirectToCognitoSignup()" class="nav-btn" title="Sign Up">
+                        ${getIconSVG('user-plus', 20)} <span class="hidden sm:inline">Sign Up</span>
+                    </button>
+                `;
+            }
+
+            // Render Main Content based on currentView
+            let htmlContent = '';
+            switch (currentView) {
+                case 'home':
+                    htmlContent = `
+                        <div class="flex flex-col items-center justify-center text-center py-16 px-4">
+                            <h2 class="text-5xl font-extrabold mb-6 drop-shadow-lg">Welcome to EventSphere!</h2>
+                            <p class="text-xl text-gray-200 mb-10 max-w-2xl">
+                                Your complete platform for creating, managing, and attending events.
+                                Seamlessly organize and enjoy memorable experiences.
+                            </p>
+                            <div class="flex gap-6">
+                                <button onclick="redirectToCognitoLogin()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-full shadow-lg transition-all duration-300 transform hover:scale-105 flex items-center gap-2">
+                                    ${getIconSVG('login', 24)} Login
+                                </button>
+                                <button onclick="redirectToCognitoSignup()" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-8 rounded-full shadow-lg transition-all duration-300 transform hover:scale-105 flex items-center gap-2">
+                                    ${getIconSVG('user-plus', 24)} Sign Up
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    break;
+                case 'organizerDashboard':
+                    if (!loggedInUser || loggedInUser.role !== 'organizer') {
+                        htmlContent = renderAccessDenied();
+                    } else {
+                        const myEvents = events.filter(event => event.organizerId === loggedInUser.id);
+                        htmlContent = `
+                            <div class="p-4">
+                                <h2 class="text-4xl font-bold mb-8 text-center drop-shadow-lg">Organizer Dashboard</h2>
+                                <div class="flex justify-between items-center mb-6">
+                                    <h3 class="text-2xl font-semibold">Your Events</h3>
+                                    <button onclick="setView('createEvent')" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg flex items-center gap-2 transition-all duration-300 transform hover:scale-105 shadow-md">
+                                        ${getIconSVG('plus-circle', 20)} Create New Event
+                                    </button>
+                                </div>
+                                ${myEvents.length === 0 ? `
+                                    <p class="text-center text-lg text-gray-300">You haven't created any events yet.</p>
+                                ` : `
+                                    <div class="space-y-4">
+                                        ${myEvents.map(event => `
+                                            <div class="bg-white bg-opacity-30 p-5 rounded-xl shadow-md flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                                                <div>
+                                                    <h3 class="text-2xl font-semibold mb-1 text-gray-900">${event.name}</h3>
+                                                    <p class="text-lg text-gray-800 flex items-center gap-2 mb-1">
+                                                        ${getIconSVG('calendar', 18)} ${event.date}
+                                                    </p>
+                                                    <p class="text-gray-700 text-sm italic">${event.location}</p>
+                                                    <p class="text-gray-700 text-sm mt-2">
+                                                        <span class="font-bold">${event.registeredAttendees.length}</span> Registrations
+                                                    </p>
+                                                </div>
+                                                <div class="flex flex-col md:flex-row gap-2 mt-3 md:mt-0">
+                                                    <button onclick="handleEditEventClick('${event.id}')" class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-3 rounded-lg flex items-center gap-1 transition-all duration-300 transform hover:scale-105 shadow-md">
+                                                        ${getIconSVG('edit', 18)} Edit
+                                                    </button>
+                                                    <button onclick="handleDeleteEvent('${event.id}')" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-3 rounded-lg flex items-center gap-1 transition-all duration-300 transform hover:scale-105 shadow-md">
+                                                        ${getIconSVG('trash-2', 18)} Delete
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                `}
+                            </div>
+                        `;
+                    }
+                    break;
+                case 'createEvent':
+                    if (!loggedInUser || loggedInUser.role !== 'organizer') {
+                        htmlContent = renderAccessDenied();
+                    } else {
+                        htmlContent = `
+                            <div class="max-w-xl mx-auto p-8 bg-white bg-opacity-20 rounded-xl shadow-xl border border-gray-300 border-opacity-30">
+                                <h2 class="text-3xl font-bold text-center mb-8">${editingEventId ? 'Edit Event' : 'Create New Event'}</h2>
+                                <form id="event-form" class="space-y-6">
+                                    <div>
+                                        <label for="eventName" class="block text-sm font-semibold mb-2">Event Name</label>
+                                        <input type="text" id="eventName" class="form-input" placeholder="Concert, Workshop, Meeting..." value="${form.name}" required>
+                                    </div>
+                                    <div>
+                                        <label for="eventDate" class="block text-sm font-semibold mb-2">Event Date</label>
+                                        <input type="date" id="eventDate" class="form-input" value="${form.date}" required>
+                                    </div>
+                                    <div>
+                                        <label for="eventLocation" class="block text-sm font-semibold mb-2">Event Location</label>
+                                        <input type="text" id="eventLocation" class="form-input" placeholder="e.g., Grand Exhibition Hall" value="${form.location}" required>
+                                    </div>
+                                    <div>
+                                        <label for="eventDescription" class="block text-sm font-semibold mb-2">Description (Optional)</label>
+                                        <textarea id="eventDescription" rows="4" class="form-textarea resize-y" placeholder="Brief description of the event...">${form.description}</textarea>
+                                    </div>
+                                    <button type="submit" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-all duration-300 transform hover:scale-105 shadow-lg">
+                                        ${getIconSVG('plus-circle', 20)} ${editingEventId ? 'Update Event' : 'Create Event'}
+                                    </button>
+                                </form>
+                            </div>
+                        `;
+                    }
+                    break;
+                case 'attendeePortal':
+                    if (!loggedInUser || loggedInUser.role !== 'attendee') {
+                        htmlContent = renderAccessDenied();
+                    } else {
+                        htmlContent = `
+                            <div class="p-4 w-full">
+                                <h2 class="text-4xl font-bold mb-8 text-center drop-shadow-lg">Attendee Portal</h2>
+                                <h3 class="text-2xl font-semibold mb-6">Browse Events</h3>
+                                ${events.length === 0 ? `
+                                    <p class="text-center text-lg text-gray-300">No events available at the moment.</p>
+                                ` : `
+                                    <div class="space-y-6">
+                                        ${events.map(event => `
+                                            <div class="bg-white bg-opacity-30 p-5 rounded-xl shadow-md flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                                                <div>
+                                                    <h3 class="text-2xl font-semibold mb-1 text-gray-900">${event.name}</h3>
+                                                    <p class="text-lg text-gray-800 flex items-center gap-2 mb-1">
+                                                        ${getIconSVG('calendar', 18)} ${event.date} at ${event.location}
+                                                    </p>
+                                                    ${event.description ? `<p class="text-gray-700 text-sm italic">${event.description}</p>` : ''}
+                                                    ${loggedInUser && event.registeredAttendees.includes(loggedInUser.id) ? `
+                                                        <p class="text-green-700 text-md font-semibold mt-2 flex items-center gap-1">
+                                                            ${getIconSVG('qr-code', 18)} You are registered!
+                                                        </p>
+                                                    ` : ''}
+                                                </div>
+                                                <div class="flex flex-col md:flex-row gap-2 mt-3 md:mt-0">
+                                                    ${!loggedInUser || !event.registeredAttendees.includes(loggedInUser.id) ? `
+                                                        <button onclick="handleRegisterForEvent('${event.id}')" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-3 rounded-lg flex items-center gap-1 transition-all duration-300 transform hover:scale-105 shadow-md">
+                                                            ${getIconSVG('user-plus', 18)} Register
+                                                        </button>
+                                                    ` : `
+                                                        <button onclick="handleDownloadTicket('${event.id}')" class="bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-3 rounded-lg flex items-center gap-1 transition-all duration-300 transform hover:scale-105 shadow-md">
+                                                            ${getIconSVG('download', 18)} Download Ticket
+                                                        </button>
+                                                    `}
+                                                    <button onclick="viewEventDetails('${event.id}')" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-3 rounded-lg flex items-center gap-1 transition-all duration-300 transform hover:scale-105 shadow-md">
+                                                        ${getIconSVG('file-text', 18)} Details
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                `}
+
+                                <!-- Display QR code if a ticket was "downloaded" -->
+                                ${currentEvent && currentView === 'attendeePortal' ? `
+                                    <div class="mt-8 p-6 bg-white bg-opacity-30 rounded-xl shadow-md text-center">
+                                        <h3 class="text-xl font-bold mb-4 text-gray-900">Your Simulated Ticket for ${currentEvent.name}</h3>
+                                        <div class="bg-white p-4 rounded-lg inline-block">
+                                            ${generateQRCodeSVG(`Event:${currentEvent.name}|Date:${currentEvent.date}|User:${loggedInUser?.email || 'N/A'}|TicketID:${currentEvent.id}-${loggedInUser?.id}`, 256)}
+                                        </div>
+                                        <p class="text-gray-800 text-sm mt-4">This QR code serves as your entry pass.</p>
+                                        <button onclick="setCurrentEvent(null); renderUI();" class="mt-4 bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg transition-colors">
+                                            Close Ticket Preview
+                                        </button>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        `;
+                    }
+                    break;
+                case 'eventDetails':
+                    if (!currentEvent) {
+                        htmlContent = `<p class="text-center text-gray-300">No event selected.</p>`;
+                    } else {
+                        const isRegistered = loggedInUser && currentEvent.registeredAttendees.includes(loggedInUser.id);
+                        htmlContent = `
+                            <div class="max-w-2xl mx-auto p-8 bg-white bg-opacity-20 rounded-xl shadow-xl border border-gray-300 border-opacity-30">
+                                <h2 class="text-4xl font-bold mb-4 text-center text-gray-900">${currentEvent.name}</h2>
+                                <p class="text-lg text-gray-800 mb-2 flex items-center gap-2 justify-center">
+                                    ${getIconSVG('calendar', 20)} ${currentEvent.date} at ${currentEvent.location}
+                                </p>
+                                <p class="text-gray-700 text-md text-center mb-6">${currentEvent.description}</p>
+
+                                <div class="flex justify-center gap-4 mb-8">
+                                    ${loggedInUser && loggedInUser.role === 'attendee' ? (
+                                        !isRegistered ? `
+                                            <button onclick="handleRegisterForEvent('${currentEvent.id}'); handleMockPayment(99.99, 'USD', '${currentEvent.name}');" class="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-lg flex items-center gap-2 transition-all duration-300 transform hover:scale-105 shadow-md">
+                                                ${getIconSVG('credit-card', 20)} Register & Pay (Mock)
+                                            </button>
+                                        ` : `
+                                            <button onclick="handleDownloadTicket('${currentEvent.id}')" class="bg-purple-500 hover:bg-purple-600 text-white font-bold py-3 px-6 rounded-lg flex items-center gap-2 transition-all duration-300 transform hover:scale-105 shadow-md">
+                                                ${getIconSVG('download', 20)} Download Ticket
+                                            </button>
+                                        `
+                                    ) : ''}
+                                </div>
+
+                                ${isRegistered ? `
+                                    <div class="mt-6 p-6 bg-white bg-opacity-30 rounded-xl shadow-md text-center">
+                                        <h3 class="text-xl font-bold mb-4 text-gray-900">Your Ticket QR Code</h3>
+                                        <div class="bg-white p-4 rounded-lg inline-block">
+                                            ${generateQRCodeSVG(`Event:${currentEvent.name}|Date:${currentEvent.date}|User:${loggedInUser?.email || 'N/A'}|TicketID:${currentEvent.id}-${loggedInUser?.id}`, 256)}
+                                        </div>
+                                        <p class="text-gray-800 text-sm mt-4">This QR code serves as your entry pass.</p>
+                                        <button onclick="setCurrentEvent(null); renderUI();" class="mt-4 bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg transition-colors">
+                                            Close Ticket Preview
+                                        </button>
+                                    </div>
+                                ` : ''}
+
+                                <div class="text-center mt-8">
+                                    <button onclick="setView('attendeePortal')" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-5 rounded-lg transition-colors">
+                                        Back to All Events
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                    }
+                    break;
+                default: // Access denied for unauthorized views
+                    htmlContent = renderAccessDenied();
+            }
+            contentArea.innerHTML = htmlContent;
+
+            // Add event listener for the event form if present (for create/edit event view)
+            if (currentView === 'createEvent') {
+                const eventFormElement = document.getElementById('event-form');
+                if (eventFormElement) {
+                    eventFormElement.addEventListener('submit', (e) => {
+                        e.preventDefault();
+                        const name = document.getElementById('eventName').value;
+                        const date = document.getElementById('eventDate').value;
+                        const location = document.getElementById('eventLocation').value;
+                        const description = document.getElementById('eventDescription').value;
+                        handleCreateOrUpdateEvent({ name, date, location, description });
+                    });
+                }
+            }
+        };
+
+        const renderAccessDenied = () => `
+            <div class="text-center p-10 bg-white bg-opacity-20 rounded-xl shadow-xl">
+                <h2 class="text-3xl font-bold mb-4">Access Denied</h2>
+                <p class="text-lg text-gray-200">Please log in to access this section.</p>
+                <button onclick="redirectToCognitoLogin()" class="mt-6 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-5 rounded-lg">
+                    Go to Login
+                </button>
+            </div>
+        `;
+
+        // --- View Navigation ---
+        const setView = (viewName) => {
+            currentView = viewName;
+            renderUI(); // Call renderUI to update the displayed content
+        };
+
+        // --- Mock Event Data (Initial Load) ---
+        // These events will be replaced by actual data from your API Gateway
+        // once a user is logged in and fetchEventsFromAPI() is called.
+        const loadInitialMockData = () => {
+            events = [
+                { id: 'e1', name: 'Tech Innovation Summit (Mock)', date: '2025-07-20', description: 'Explore the latest in AI and blockchain.', location: 'Convention Center', organizerId: 'org1', registeredAttendees: [] },
+                { id: 'e2', name: 'Digital Art Expo (Mock)', date: '2525-08-15', description: 'A showcase of stunning digital masterpieces.', location: 'Art Gallery', organizerId: 'org1', registeredAttendees: [] },
+                { id: 'e3', name: 'Local Music Festival (Mock)', date: '2025-09-01', description: 'Enjoy live performances from local bands.', location: 'City Park', organizerId: 'org2', registeredAttendees: [] },
+            ];
+            renderUI();
+        };
+
+        // --- Authentication Logic (Cognito Hosted UI Integration) ---
+        // These functions redirect to Cognito's hosted pages.
+
+        const redirectToCognitoLogin = () => {
+            // Cognito's authorize endpoint for login. response_type=token requests id_token and access_token.
+            const loginUrl = `https://${COGNITO_DOMAIN}/login?response_type=token&client_id=${COGNITO_USER_POOL_CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_SIGN_IN_URL)}`;
+            window.location.assign(loginUrl);
+        };
+
+        const redirectToCognitoSignup = () => {
+            // Cognito's authorize endpoint for signup.
+            const signupUrl = `https://${COGNITO_DOMAIN}/signup?response_type=token&client_id=${COGNITO_USER_POOL_CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_SIGN_IN_URL)}`;
+            window.location.assign(signupUrl);
+        };
+
+        const handleLogout = () => {
+            // Cognito's logout endpoint.
+            const logoutUrl = `https://${COGNITO_DOMAIN}/logout?client_id=${COGNITO_USER_POOL_CLIENT_ID}&logout_uri=${encodeURIComponent(REDIRECT_SIGN_OUT_URL)}`;
+            window.location.assign(logoutUrl);
+        };
+
+        // Function to parse JWT tokens from the URL hash after Cognito redirect
+        const parseCognitoTokens = () => {
+            const hash = window.location.hash.substring(1); 
+            const params = new URLSearchParams(hash);
+            const idToken = params.get('id_token');
+            const accessToken = params.get('access_token');
+            
+
+            if (idToken) {
+                try {
+                    const payload = JSON.parse(atob(idToken.split('.')[1])); 
+                    
+                    loggedInUser = {
+                        id: payload.sub, 
+                        email: payload.email, 
+                        role: payload['cognito:groups'] && payload['cognito:groups'].includes('Organizers') ? 'organizer' : 'attendee',
+                        idToken: idToken,     
+                        accessToken: accessToken 
+                    };
+                    showAlert('Login Successful', `Welcome, ${loggedInUser.email}! You are logged in as a ${loggedInUser.role}.`);
+                    
+                    window.history.replaceState({}, document.title, window.location.pathname + window.location.search);
+                    
+                    if (loggedInUser.role === 'organizer') {
+                        setView('organizerDashboard');
+                        fetchEventsFromAPI(); 
+                    } else {
+                        setView('attendeePortal');
+                        fetchEventsFromAPI(); 
+                    }
+                } catch (e) {
+                    console.error("Error parsing ID token:", e);
+                    showAlert('Authentication Error', 'Could not parse user session. Please try logging in again.');
+                    loggedInUser = null;
+                    setView('home'); 
+                }
+            } else {
+                if (window.location.search.includes('logout=true')) {
+                    showAlert('Logged Out', 'You have been successfully logged out.');
+                    window.history.replaceState({}, document.title, window.location.pathname); 
+                }
+                loggedInUser = null; 
+                setView('home'); 
+            }
+            renderUI(); 
+        };
+
+        // --- API Calls (TO YOUR AWS LAMBDA/DYNAMODB BACKEND) ---
+        const fetchEventsFromAPI = async () => {
+            if (!loggedInUser) {
+                console.warn('Cannot fetch events: No user logged in. Displaying mock data.');
+                loadInitialMockData();
+                return; 
+            }
+
+            try {
+                const response = await fetch(API_GATEWAY_EVENTS_URL, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${loggedInUser.idToken}` 
+                    }
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json(); 
+                    throw new Error(`API error: ${response.status} ${errorData.message || response.statusText}`);
+                }
+
+                const data = await response.json();
+                events = data.events || data; 
+                console.log('Fetched events successfully:', events);
+                renderUI(); 
+            } catch (error) {
+                console.error('Error fetching events:', error);
+                showAlert('Error', `Failed to load events from backend: ${error.message}. Please check your API Gateway URL and Lambda permissions. Displaying mock data.`);
+                loadInitialMockData();
+            }
+        };
+
+        const handleCreateOrUpdateEvent = async ({ name, date, location, description }) => {
+            if (!loggedInUser || loggedInUser.role !== 'organizer') {
+                showAlert('Error', 'Unauthorized: Only organizers can create/edit events.');
+                return;
+            }
+            if (!name || !date || !location) {
+                showAlert('Input Error', 'Event Name, Date, and Location are required.');
+                return;
+            }
+
+            const eventData = {
+                id: editingEventId || `e-${Date.now()}`, 
+                name,
+                date,
+                location,
+                description,
+                organizerId: loggedInUser.id, 
+                registeredAttendees: editingEventId ? (events.find(e => e.id === editingEventId)?.registeredAttendees || []) : []
+            };
+
+            const method = editingEventId ? 'PUT' : 'POST';
+            const apiUrl = editingEventId ? `${API_GATEWAY_EVENTS_URL}/${editingEventId}` : API_GATEWAY_CREATE_EVENT_URL; 
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${loggedInUser.idToken}` 
+                    },
+                    body: JSON.stringify(eventData) 
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(`API error: ${response.status} ${errorData.message || response.statusText}`);
+                }
+
+                showAlert('Success', `Event ${editingEventId ? 'updated' : 'created'} successfully!`);
+                editingEventId = null; 
+                form = { name: '', date: '', description: '', location: '', organizerId: '' }; 
+                await fetchEventsFromAPI(); 
+                setView('organizerDashboard'); 
+            } catch (error) {
+                console.error('Error creating/updating event:', error);
+                showAlert('Error', `Failed to ${editingEventId ? 'update' : 'create'} event: ${error.message}. Please check your Lambda logic and API Gateway setup.`);
+            }
+        };
+
+        const handleEditEventClick = (id) => {
+            editingEventId = id;
+            const eventToEdit = events.find(e => e.id === id);
+            if (eventToEdit) {
+                form = {
+                    name: eventToEdit.name,
+                    date: eventToEdit.date,
+                    description: eventToEdit.description,
+                    location: eventToEdit.location,
+                    organizerId: eventToEdit.organizerId 
+                };
+                setView('createEvent'); 
+            } else {
+                showAlert('Error', 'Event not found for editing.');
+            }
+        };
+
+        const handleDeleteEvent = (id) => {
+            showConfirm('Delete Event', 'Are you sure you want to delete this event? This action cannot be undone.', async () => {
+                if (!loggedInUser || loggedInUser.role !== 'organizer') {
+                    showAlert('Error', 'Unauthorized: Only organizers can delete events.');
+                    return;
+                }
+                try {
+                    const response = await fetch(`${API_GATEWAY_EVENTS_URL}/${id}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'Authorization': `Bearer ${loggedInUser.idToken}` 
+                        }
+                    });
+                    if (!response.ok) {
+                         const errorData = await response.json();
+                        throw new Error(`API error: ${response.status} ${errorData.message || response.statusText}`);
+                    }
+                    showAlert('Success', 'Event deleted successfully!');
+                    await fetchEventsFromAPI(); 
+                    setView('organizerDashboard');
+                } catch (error) {
+                    console.error('Error deleting event:', error);
+                    showAlert('Error', `Failed to delete event: ${error.message}.`);
+                }
+            });
+        };
+
+        const handleRegisterForEvent = async (eventId) => {
+            if (!loggedInUser || loggedInUser.role !== 'attendee') {
+                showAlert('Error', 'Please log in as an attendee to register.');
+                return;
+            }
+
+            const eventToRegister = events.find(e => e.id === eventId);
+            if (!eventToRegister) {
+                showAlert('Error', 'Event not found.');
+                return;
+            }
+            if (eventToRegister.registeredAttendees.includes(loggedInUser.id)) {
+                showAlert('Already Registered', 'You are already registered for this event.');
+                return;
+            }
+
+            try {
+                const updatedEvent = {
+                    ...eventToRegister,
+                    registeredAttendees: [...eventToRegister.registeredAttendees, loggedInUser.id]
+                };
+                const response = await fetch(`${API_GATEWAY_EVENTS_URL}/${eventId}`, { 
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${loggedInUser.idToken}` 
+                    },
+                    body: JSON.stringify(updatedEvent)
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(`API error: ${response.status} ${errorData.message || response.statusText}`);
+                }
+                showAlert('Registration Successful', `You have successfully registered for "${eventToRegister.name}"!`);
+                await fetchEventsFromAPI(); 
+            } catch (error) {
+                console.error('Error registering for event:', error);
+                showAlert('Error', `Failed to register for event: ${error.message}.`);
+            }
+        };
+
+        const handleDownloadTicket = (eventId) => {
+            if (!loggedInUser || loggedInUser.role !== 'attendee') {
+                showAlert('Error', 'Please log in as an attendee to download tickets.');
+                return;
+            }
+            const event = events.find(e => e.id === eventId);
+            if (!event) {
+                showAlert('Error', 'Event not found.');
+                return;
+            }
+            currentEvent = event; 
+            showAlert('Ticket Generated (Simulated)', `Your ticket for "${event.name}" is ready! (See QR code below). In a real app, a PDF or unique QR code would be downloaded.`);
+            renderUI(); 
+        };
+
+        const handleMockPayment = (amount, currency, eventName) => {
+            showAlert('Payment Simulation', `Simulating payment of ${amount} ${currency} for "${eventName}". In a real app, this would integrate with a payment gateway like Stripe.`);
+        };
+
+        const viewEventDetails = (id) => {
+            currentEvent = events.find(e => e.id === id);
+            setView('eventDetails');
+        };
+
+        // --- Initial Application Load Logic ---
+        document.addEventListener('DOMContentLoaded', () => {
+            parseCognitoTokens(); 
+            
+            if (!loggedInUser) {
+                loadInitialMockData(); 
+            }
+        });
+    </script>
+</body>
+</html>
