@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+[⚠️ Suspicious Content] <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -100,15 +100,17 @@
 
     <script>
         // --- Configuration (REPLACE WITH YOUR AWS DETAILS) ---
-        const AWS_REGION = 'us-east-1'; // YOUR AWS region
+        const AWS_REGION = 'us-east-1'; // YOUR AWS region (e.g., 'us-east-1', 'ap-south-1')
         const COGNITO_USER_POOL_ID = 'us-east-1_XgyeAkGsm'; // YOUR User Pool ID
         const COGNITO_USER_POOL_CLIENT_ID = '7jlpbpk9964imvoa9s4mdagmm8'; // YOUR User Pool App Client ID
         const COGNITO_DOMAIN = 'eventsphere-yourname-app.auth.us-east-1.amazoncognito.com'; // YOUR Cognito Hosted UI Domain
 
-        // API Gateway URLs - Ensure these point to your deployed API Gateway endpoints.
-        const API_GATEWAY_EVENTS_URL = 'https://r7z06t5m5h.execute-api.us-east-1.amazonaws.com/dev/events'; // For GET/PUT/DELETE events
-        const API_GATEWAY_CREATE_EVENT_URL = 'https://r7z06t5m5h.execute-api.us-east-1.amazonaws.com/dev/createEvent'; // For POST createEvent
-        const API_GATEWAY_UPDATE_ROLE_URL = 'YOUR_API_GATEWAY_URL_FOR_UPDATE_USER_ROLE'; // <-- **NEW: You'll set this after deploying the new Lambda**
+        // API Gateway URLs - These should be the Invoke URLs for your Lambda functions via API Gateway.
+        // YOU WILL GET THESE URLs AFTER COMPLETING API GATEWAY SETUP (Part 3).
+        const API_GATEWAY_BASE_URL = 'YOUR_API_GATEWAY_INVOKE_URL_HERE'; // Example: https://xxxxxxxxxx.execute-api.your-region.amazonaws.com/dev
+        const API_GATEWAY_EVENTS_URL = API_GATEWAY_BASE_URL + '/events'; // Derived from base
+        const API_GATEWAY_CREATE_EVENT_URL = API_GATEWAY_BASE_URL + '/events'; // POST to /events for creation
+        const API_GATEWAY_UPDATE_ROLE_URL = API_GATEWAY_BASE_URL + '/updateRole'; // NEW: For assigning user roles
 
         // IMPORTANT: These redirect URLs MUST be explicitly added to "Allowed callback URLs"
         // and "Allowed sign-out URLs" in your Cognito User Pool App Client settings.
@@ -182,9 +184,9 @@
                 modalOverlay.classList.add('hidden');
                 onCancelCallback();
             };
-            modalCancelBtn.classList.remove('hidden'); // Show cancel button for confirms
             modalConfirmBtn.classList.remove('bg-blue-500', 'hover:bg-blue-600');
             modalConfirmBtn.classList.add('bg-red-500', 'hover:bg-red-600'); // Red for Confirm
+            modalCancelBtn.classList.remove('hidden'); // Show cancel button for confirms
             modalOverlay.classList.remove('hidden');
         };
 
@@ -223,7 +225,6 @@
                     </button>
                 `;
             } else {
-                // Changed to show Login and then Sign Up Role buttons
                 authButtonsDiv.innerHTML = `
                     <button onclick="redirectToCognitoLogin()" class="nav-btn" title="Login">
                         ${getIconSVG('login', 20)} <span class="hidden sm:inline">Login</span>
@@ -262,6 +263,7 @@
                             <h2 class="text-3xl font-bold mb-8 text-gray-900">Sign Up As...</h2>
                             <p class="text-lg text-gray-200 mb-6">Choose your primary role for EventSphere:</p>
                             <div class="flex flex-col gap-4">
+                                <!-- Both buttons go to generic Hosted UI signup -->
                                 <button onclick="redirectToCognitoSignup()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg flex items-center justify-center gap-2 transition-all duration-300 transform hover:scale-105 shadow-lg">
                                     ${getIconSVG('settings', 24)} Event Organizer
                                 </button>
@@ -281,8 +283,8 @@
                 case 'chooseRoleAfterLogin': // New view for role selection AFTER initial login
                     htmlContent = `
                         <div class="max-w-md mx-auto p-8 bg-white bg-opacity-20 rounded-xl shadow-xl border border-gray-300 border-opacity-30 text-center">
-                            <h2 class="text-3xl font-bold mb-8 text-gray-900">Welcome, ${loggedInUser?.email}!</h2>
-                            <p class="text-lg text-gray-200 mb-6">Please choose your role to get started:</p>
+                            <h2 class="text-3xl font-bold mb-8 text-gray-900">Welcome, ${loggedInUser?.email || 'New User'}!</h2>
+                            <p class="text-lg text-gray-200 mb-6">It looks like this is your first time here, or your role hasn't been set. Please choose your role to get started:</p>
                             <div class="flex flex-col gap-4">
                                 <button onclick="handleAssignRole('organizer')" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg flex items-center justify-center gap-2 transition-all duration-300 transform hover:scale-105 shadow-lg">
                                     ${getIconSVG('settings', 24)} I am an Event Organizer
@@ -561,11 +563,11 @@
                     loggedInUser = {
                         id: payload.sub, 
                         email: payload.email, 
-                        // The role will initially be 'attendee' if no groups are assigned, or based on existing groups.
-                        // If user has no 'cognito:groups' claim (new signup), it defaults to 'attendee'.
+                        // Determine role based on 'cognito:groups' claim (case-sensitive)
+                        // If user has no 'cognito:groups' claim (new signup), set role to 'unassigned'.
                         role: (payload['cognito:groups'] && payload['cognito:groups'].length > 0) ? 
                               (payload['cognito:groups'].includes('Organizers') ? 'organizer' : 'attendee') : 
-                              'unassigned', // Set to 'unassigned' if no groups are found
+                              'unassigned', 
                         idToken: idToken,     
                         accessToken: accessToken 
                     };
@@ -578,10 +580,11 @@
                         setView('chooseRoleAfterLogin');
                     } else if (loggedInUser.role === 'organizer') {
                         setView('organizerDashboard');
-                        fetchEventsFromAPI(); 
+                        // No need to fetch events here, as we're focusing on role assignment first.
+                        // We will add event fetching later once core event Lambdas are ready.
                     } else { // 'attendee' or any other assigned role
                         setView('attendeePortal');
-                        fetchEventsFromAPI(); 
+                        // No need to fetch events here.
                     }
                 } catch (e) {
                     console.error("Error parsing ID token:", e);
@@ -608,19 +611,20 @@
                 return;
             }
 
-            if (!API_GATEWAY_UPDATE_ROLE_URL || API_GATEWAY_UPDATE_ROLE_URL === 'YOUR_API_GATEWAY_URL_FOR_UPDATE_USER_ROLE') {
+            // IMPORTANT: API_GATEWAY_UPDATE_ROLE_URL needs to be set in the configuration section above.
+            if (!API_GATEWAY_UPDATE_ROLE_URL || API_GATEWAY_UPDATE_ROLE_URL.includes('YOUR_API_GATEWAY_INVOKE_URL_HERE')) {
                 showAlert('Configuration Error', 'The API_GATEWAY_UPDATE_ROLE_URL is not configured. Cannot assign role.');
                 console.error("API_GATEWAY_UPDATE_ROLE_URL is not set!");
                 return;
             }
 
             try {
-                showAlert('Assigning Role', `Assigning you as a "${role}"... Please wait.`); // Show immediate feedback
+                showAlert('Assigning Role', `Assigning you as a "${role}"... Please wait.`); 
                 const response = await fetch(API_GATEWAY_UPDATE_ROLE_URL, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${loggedInUser.idToken}` // Authenticate the request
+                        'Authorization': `Bearer ${loggedInUser.idToken}` 
                     },
                     body: JSON.stringify({
                         userId: loggedInUser.id, // User's Cognito 'sub'
@@ -635,210 +639,51 @@
 
                 const result = await response.json();
                 console.log('Role assignment successful:', result);
-                showAlert('Role Assigned!', `You are now an ${role}.`);
+                showAlert('Role Assigned!', `You are now an ${role}. Please log in again to confirm the updated role in your token.`);
 
-                // Update the loggedInUser object with the new role and re-render
-                loggedInUser.role = role;
-                if (role === 'organizer') {
-                    setView('organizerDashboard');
-                    fetchEventsFromAPI();
-                } else {
-                    setView('attendeePortal');
-                    fetchEventsFromAPI();
-                }
+                // After successful role assignment, force a logout to get a fresh ID token with updated groups.
+                // This is the most reliable way for the frontend to get the new role.
+                handleLogout(); 
+
             } catch (error) {
                 console.error('Error assigning role:', error);
                 showAlert('Role Assignment Failed', `Could not assign role: ${error.message}. Please try again or contact support.`);
-                // If assignment fails, keep them on the role selection screen or redirect home.
-                setView('chooseRoleAfterLogin'); // Keep on selection screen if failed
+                setView('chooseRoleAfterLogin'); 
             }
         };
 
-        // --- API Calls (TO YOUR AWS LAMBDA/DYNAMODB BACKEND) ---
+        // --- API Calls (Stubs for now, will be implemented with backend) ---
+        // These functions will interact with your DynamoDB and S3 backend later.
+        // For now, they might just show mock data or simple alerts.
+
         const fetchEventsFromAPI = async () => {
-            if (!loggedInUser) {
-                console.warn('Cannot fetch events: No user logged in. Displaying mock data.');
-                loadInitialMockData();
-                return; 
-            }
-
-            try {
-                const response = await fetch(API_GATEWAY_EVENTS_URL, {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${loggedInUser.idToken}` 
-                    }
-                });
-
-                if (!response.ok) {
-                    const errorData = await response.json(); 
-                    throw new Error(`API error: ${response.status} ${errorData.message || response.statusText}`);
-                }
-
-                const data = await response.json();
-                events = data.events || data; 
-                console.log('Fetched events successfully:', events);
-                renderUI(); 
-            } catch (error) {
-                console.error('Error fetching events:', error);
-                showAlert('Error', `Failed to load events from backend: ${error.message}. Please check your API Gateway URL and Lambda permissions. Displaying mock data.`);
-                loadInitialMockData();
-            }
+            console.warn('fetchEventsFromAPI: Backend integration not fully complete for events yet. Showing mock data.');
+            loadInitialMockData(); // Always show mock data until full backend is ready
         };
 
         const handleCreateOrUpdateEvent = async ({ name, date, location, description }) => {
-            if (!loggedInUser || loggedInUser.role !== 'organizer') {
-                showAlert('Error', 'Unauthorized: Only organizers can create/edit events.');
-                return;
-            }
-            if (!name || !date || !location) {
-                showAlert('Input Error', 'Event Name, Date, and Location are required.');
-                return;
-            }
-
-            const eventData = {
-                id: editingEventId || `e-${Date.now()}`, 
-                name,
-                date,
-                location,
-                description,
-                organizerId: loggedInUser.id, 
-                registeredAttendees: editingEventId ? (events.find(e => e.id === editingEventId)?.registeredAttendees || []) : []
-            };
-
-            const method = editingEventId ? 'PUT' : 'POST';
-            const apiUrl = editingEventId ? `${API_GATEWAY_EVENTS_URL}/${editingEventId}` : API_GATEWAY_CREATE_EVENT_URL; 
-
-            try {
-                const response = await fetch(apiUrl, {
-                    method: method,
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${loggedInUser.idToken}` 
-                    },
-                    body: JSON.stringify(eventData) 
-                });
-
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(`API error: ${response.status} ${errorData.message || response.statusText}`);
-                }
-
-                showAlert('Success', `Event ${editingEventId ? 'updated' : 'created'} successfully!`);
-                editingEventId = null; 
-                form = { name: '', date: '', description: '', location: '', organizerId: '' }; 
-                await fetchEventsFromAPI(); 
-                setView('organizerDashboard'); 
-            } catch (error) {
-                console.error('Error creating/updating event:', error);
-                showAlert('Error', `Failed to ${editingEventId ? 'update' : 'create'} event: ${error.message}. Please check your Lambda logic and API Gateway setup.`);
-            }
-        };
-
-        const handleEditEventClick = (id) => {
-            editingEventId = id;
-            const eventToEdit = events.find(e => e.id === id);
-            if (eventToEdit) {
-                form = {
-                    name: eventToEdit.name,
-                    date: eventToEdit.date,
-                    description: eventToEdit.description,
-                    location: eventToEdit.location,
-                    organizerId: eventToEdit.organizerId 
-                };
-                setView('createEvent'); 
-            } else {
-                showAlert('Error', 'Event not found for editing.');
-            }
+            showAlert('Feature Not Ready', 'Event creation/update backend integration is coming soon!');
+            console.warn('handleCreateOrUpdateEvent: Backend not fully integrated yet.');
         };
 
         const handleDeleteEvent = (id) => {
-            showConfirm('Delete Event', 'Are you sure you want to delete this event? This action cannot be undone.', async () => {
-                if (!loggedInUser || loggedInUser.role !== 'organizer') {
-                    showAlert('Error', 'Unauthorized: Only organizers can delete events.');
-                    return;
-                }
-                try {
-                    const response = await fetch(`${API_GATEWAY_EVENTS_URL}/${id}`, {
-                        method: 'DELETE',
-                        headers: {
-                            'Authorization': `Bearer ${loggedInUser.idToken}` 
-                        }
-                    });
-                    if (!response.ok) {
-                         const errorData = await response.json();
-                        throw new Error(`API error: ${response.status} ${errorData.message || response.statusText}`);
-                    }
-                    showAlert('Success', 'Event deleted successfully!');
-                    await fetchEventsFromAPI(); 
-                    setView('organizerDashboard');
-                } catch (error) {
-                    console.error('Error deleting event:', error);
-                    showAlert('Error', `Failed to delete event: ${error.message}.`);
-                }
-            });
+            showAlert('Feature Not Ready', 'Event deletion backend integration is coming soon!');
+            console.warn('handleDeleteEvent: Backend not fully integrated yet.');
         };
 
         const handleRegisterForEvent = async (eventId) => {
-            if (!loggedInUser || loggedInUser.role !== 'attendee') {
-                showAlert('Error', 'Please log in as an attendee to register.');
-                return;
-            }
-
-            const eventToRegister = events.find(e => e.id === eventId);
-            if (!eventToRegister) {
-                showAlert('Error', 'Event not found.');
-                return;
-            }
-            if (eventToRegister.registeredAttendees.includes(loggedInUser.id)) {
-                showAlert('Already Registered', 'You are already registered for this event.');
-                return;
-            }
-
-            try {
-                const updatedEvent = {
-                    ...eventToRegister,
-                    registeredAttendees: [...eventToRegister.registeredAttendees, loggedInUser.id]
-                };
-                const response = await fetch(`${API_GATEWAY_EVENTS_URL}/${eventId}`, { 
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${loggedInUser.idToken}` 
-                    },
-                    body: JSON.stringify(updatedEvent)
-                });
-
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(`API error: ${response.status} ${errorData.message || response.statusText}`);
-                }
-                showAlert('Registration Successful', `You have successfully registered for "${eventToRegister.name}"!`);
-                await fetchEventsFromAPI(); 
-            } catch (error) {
-                console.error('Error registering for event:', error);
-                showAlert('Error', `Failed to register for event: ${error.message}.`);
-            }
+            showAlert('Feature Not Ready', 'Event registration backend integration is coming soon!');
+            console.warn('handleRegisterForEvent: Backend not fully integrated yet.');
         };
 
         const handleDownloadTicket = (eventId) => {
-            if (!loggedInUser || loggedInUser.role !== 'attendee') {
-                showAlert('Error', 'Please log in as an attendee to download tickets.');
-                return;
-            }
-            const event = events.find(e => e.id === eventId);
-            if (!event) {
-                showAlert('Error', 'Event not found.');
-                return;
-            }
-            currentEvent = event; 
-            showAlert('Ticket Generated (Simulated)', `Your ticket for "${event.name}" is ready! (See QR code below). In a real app, a PDF or unique QR code would be downloaded.`);
-            renderUI(); 
+            showAlert('Feature Not Ready', 'Ticket download backend integration is coming soon!');
+            console.warn('handleDownloadTicket: Backend not fully integrated yet.');
         };
 
         const handleMockPayment = (amount, currency, eventName) => {
-            showAlert('Payment Simulation', `Simulating payment of ${amount} ${currency} for "${eventName}". In a real app, this would integrate with a payment gateway like Stripe.`);
+            showAlert('Payment Simulation', `Simulating payment of ${amount} ${currency} for "${eventName}". (This is a mock. Real integration later).`);
+            console.log('Mock payment processed.');
         };
 
         const viewEventDetails = (id) => {
@@ -849,10 +694,7 @@
         // --- Initial Application Load Logic ---
         document.addEventListener('DOMContentLoaded', () => {
             parseCognitoTokens(); 
-            
-            if (!loggedInUser) {
-                loadInitialMockData(); 
-            }
+            // loadInitialMockData() is called inside parseCognitoTokens if not logged in
         });
     </script>
 </body>
