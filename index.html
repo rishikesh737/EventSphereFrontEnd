@@ -100,29 +100,28 @@
 
     <script>
         // --- Configuration (REPLACE WITH YOUR AWS DETAILS) ---
-        const AWS_REGION = 'us-east-1'; // YOUR AWS region (e.g., 'us-east-1', 'ap-south-1')
+        const AWS_REGION = 'us-east-1'; // YOUR AWS region
         const COGNITO_USER_POOL_ID = 'us-east-1_XgyeAkGsm'; // YOUR User Pool ID
         const COGNITO_USER_POOL_CLIENT_ID = '7jlpbpk9964imvoa9s4mdagmm8'; // YOUR User Pool App Client ID
         const COGNITO_DOMAIN = 'eventsphere-yourname-app.auth.us-east-1.amazoncognito.com'; // YOUR Cognito Hosted UI Domain
 
-        // API Gateway URLs - These should be the Invoke URLs for your Lambda functions via API Gateway.
-        const API_GATEWAY_EVENTS_URL = 'https://r7z06t5m5h.execute-api.us-east-1.amazonaws.com/dev/events'; // YOUR API Gateway endpoint for GET/PUT/DELETE events
-        const API_GATEWAY_CREATE_EVENT_URL = 'https://r7z06t5m5h.execute-api.us-east-1.amazonaws.com/dev/createEvent'; // YOUR API Gateway endpoint for POST createEvent
+        // API Gateway URLs - Ensure these point to your deployed API Gateway endpoints.
+        const API_GATEWAY_EVENTS_URL = 'https://r7z06t5m5h.execute-api.us-east-1.amazonaws.com/dev/events'; // For GET/PUT/DELETE events
+        const API_GATEWAY_CREATE_EVENT_URL = 'https://r7z06t5m5h.execute-api.us-east-1.amazonaws.com/dev/createEvent'; // For POST createEvent
+        const API_GATEWAY_UPDATE_ROLE_URL = 'YOUR_API_GATEWAY_URL_FOR_UPDATE_USER_ROLE'; // <-- **NEW: You'll set this after deploying the new Lambda**
 
         // IMPORTANT: These redirect URLs MUST be explicitly added to "Allowed callback URLs"
         // and "Allowed sign-out URLs" in your Cognito User Pool App Client settings.
-        // **FOR DEPLOYMENT, USE YOUR ACTUAL AMPLIFY HOSTING HTTPS URL.**
-        // For your deployment, use: https://main.d7icjcyxhs1jd.amplifyapp.com/
+        // This is your deployed Amplify Hosting HTTPS URL.
         const REDIRECT_SIGN_IN_URL = 'https://main.d7icjcyxhs1jd.amplifyapp.com/'; 
         const REDIRECT_SIGN_OUT_URL = 'https://main.d7icjcyxhs1jd.amplifyapp.com/'; 
-
 
 
         // --- Global State Variables ---
         let loggedInUser = null; 
         let events = []; 
         let currentEvent = null; 
-        let currentView = 'home'; 
+        let currentView = 'home'; // 'home', 'signupRoleSelection', 'chooseRoleAfterLogin', 'organizerDashboard', 'attendeePortal', 'eventDetails', 'createEvent'
         let editingEventId = null; 
         let form = { name: '', date: '', description: '', location: '', organizerId: '' }; 
 
@@ -143,7 +142,7 @@
                 'calendar': `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-calendar"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>`,
                 'file-text': `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-file-text"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>`,
                 'download': `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-download"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>`,
-                'qr-code': `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-qr-code"><rect width="8" height="8" x="2" y="2" rx="1"/><rect width="8" height="8" x="14" y="2" rx="1"/><rect width="8" height="8" x="2" y="14" rx="1"/><path d="M7 7h.01"/><path d="M19 7h.01"/><path d="M7 19h.01"/><path d="M17 17h.01"/><path d="M14 12v-2a2 2 0 0 1 2-2h2"/><path d="M14 14h.01"/><path d="M14 17h.01"/><path d="M17 14h.01"/><path d="M22 17h-4a2 2 0 0 0-2 2v4"/><path d="M12 22h.01"/><path d="M22 12v.01"/></svg>`,
+                'qr-code': `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-qr-code"><rect width="8" height="8" x="2" y="2" rx="1"/><rect width="8" height="8" x="14" y="2" rx="1"/><rect width="8" height="8" x="2" y="14" rx="1"/><path d="M7 7h.01"/><path d="M19 7h.01"/><path d="M7 19h.01"/><path d="M17 17h.01"/><path d="M14 12v-2a2 2 0 0 1 2-2h2"/><path d="M14 14h.01"/><path d="M14 17h.01"/><path d="M17 14h.01"/><path d="M22 17h-4a2 0 0 0-2 2v4"/><path d="M12 22h.01"/><path d="M22 12v.01"/></svg>`,
                 'credit-card': `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-credit-card"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>`
             };
             return icons[name] || '';
@@ -224,11 +223,12 @@
                     </button>
                 `;
             } else {
+                // Changed to show Login and then Sign Up Role buttons
                 authButtonsDiv.innerHTML = `
                     <button onclick="redirectToCognitoLogin()" class="nav-btn" title="Login">
                         ${getIconSVG('login', 20)} <span class="hidden sm:inline">Login</span>
                     </button>
-                    <button onclick="redirectToCognitoSignup()" class="nav-btn" title="Sign Up">
+                    <button onclick="setView('signupRoleSelection')" class="nav-btn" title="Sign Up">
                         ${getIconSVG('user-plus', 20)} <span class="hidden sm:inline">Sign Up</span>
                     </button>
                 `;
@@ -249,8 +249,46 @@
                                 <button onclick="redirectToCognitoLogin()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-full shadow-lg transition-all duration-300 transform hover:scale-105 flex items-center gap-2">
                                     ${getIconSVG('login', 24)} Login
                                 </button>
-                                <button onclick="redirectToCognitoSignup()" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-8 rounded-full shadow-lg transition-all duration-300 transform hover:scale-105 flex items-center gap-2">
+                                <button onclick="setView('signupRoleSelection')" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-8 rounded-full shadow-lg transition-all duration-300 transform hover:scale-105 flex items-center gap-2">
                                     ${getIconSVG('user-plus', 24)} Sign Up
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    break;
+                case 'signupRoleSelection':
+                    htmlContent = `
+                        <div class="max-w-md mx-auto p-8 bg-white bg-opacity-20 rounded-xl shadow-xl border border-gray-300 border-opacity-30 text-center">
+                            <h2 class="text-3xl font-bold mb-8 text-gray-900">Sign Up As...</h2>
+                            <p class="text-lg text-gray-200 mb-6">Choose your primary role for EventSphere:</p>
+                            <div class="flex flex-col gap-4">
+                                <button onclick="redirectToCognitoSignup()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg flex items-center justify-center gap-2 transition-all duration-300 transform hover:scale-105 shadow-lg">
+                                    ${getIconSVG('settings', 24)} Event Organizer
+                                </button>
+                                <button onclick="redirectToCognitoSignup()" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg flex items-center justify-center gap-2 transition-all duration-300 transform hover:scale-105 shadow-lg">
+                                    ${getIconSVG('user', 24)} Event Attendee
+                                </button>
+                            </div>
+                            <p class="text-center mt-6 text-gray-200">
+                                Already have an account? 
+                                <button onclick="redirectToCognitoLogin()" class="text-blue-400 hover:underline font-semibold">
+                                    Login
+                                </button>
+                            </p>
+                        </div>
+                    `;
+                    break;
+                case 'chooseRoleAfterLogin': // New view for role selection AFTER initial login
+                    htmlContent = `
+                        <div class="max-w-md mx-auto p-8 bg-white bg-opacity-20 rounded-xl shadow-xl border border-gray-300 border-opacity-30 text-center">
+                            <h2 class="text-3xl font-bold mb-8 text-gray-900">Welcome, ${loggedInUser?.email}!</h2>
+                            <p class="text-lg text-gray-200 mb-6">Please choose your role to get started:</p>
+                            <div class="flex flex-col gap-4">
+                                <button onclick="handleAssignRole('organizer')" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg flex items-center justify-center gap-2 transition-all duration-300 transform hover:scale-105 shadow-lg">
+                                    ${getIconSVG('settings', 24)} I am an Event Organizer
+                                </button>
+                                <button onclick="handleAssignRole('attendee')" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg flex items-center justify-center gap-2 transition-all duration-300 transform hover:scale-105 shadow-lg">
+                                    ${getIconSVG('user', 24)} I am an Event Attendee
                                 </button>
                             </div>
                         </div>
@@ -483,8 +521,6 @@
         };
 
         // --- Mock Event Data (Initial Load) ---
-        // These events will be replaced by actual data from your API Gateway
-        // once a user is logged in and fetchEventsFromAPI() is called.
         const loadInitialMockData = () => {
             events = [
                 { id: 'e1', name: 'Tech Innovation Summit (Mock)', date: '2025-07-20', description: 'Explore the latest in AI and blockchain.', location: 'Convention Center', organizerId: 'org1', registeredAttendees: [] },
@@ -495,22 +531,18 @@
         };
 
         // --- Authentication Logic (Cognito Hosted UI Integration) ---
-        // These functions redirect to Cognito's hosted pages.
-
         const redirectToCognitoLogin = () => {
-            // Cognito's authorize endpoint for login. response_type=token requests id_token and access_token.
             const loginUrl = `https://${COGNITO_DOMAIN}/login?response_type=token&client_id=${COGNITO_USER_POOL_CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_SIGN_IN_URL)}`;
             window.location.assign(loginUrl);
         };
 
         const redirectToCognitoSignup = () => {
-            // Cognito's authorize endpoint for signup.
+            // This now leads to the generic Hosted UI signup, no role info passed directly here.
             const signupUrl = `https://${COGNITO_DOMAIN}/signup?response_type=token&client_id=${COGNITO_USER_POOL_CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_SIGN_IN_URL)}`;
             window.location.assign(signupUrl);
         };
 
         const handleLogout = () => {
-            // Cognito's logout endpoint.
             const logoutUrl = `https://${COGNITO_DOMAIN}/logout?client_id=${COGNITO_USER_POOL_CLIENT_ID}&logout_uri=${encodeURIComponent(REDIRECT_SIGN_OUT_URL)}`;
             window.location.assign(logoutUrl);
         };
@@ -522,7 +554,6 @@
             const idToken = params.get('id_token');
             const accessToken = params.get('access_token');
             
-
             if (idToken) {
                 try {
                     const payload = JSON.parse(atob(idToken.split('.')[1])); 
@@ -530,18 +561,25 @@
                     loggedInUser = {
                         id: payload.sub, 
                         email: payload.email, 
-                        role: payload['cognito:groups'] && payload['cognito:groups'].includes('Organizers') ? 'organizer' : 'attendee',
+                        // The role will initially be 'attendee' if no groups are assigned, or based on existing groups.
+                        // If user has no 'cognito:groups' claim (new signup), it defaults to 'attendee'.
+                        role: (payload['cognito:groups'] && payload['cognito:groups'].length > 0) ? 
+                              (payload['cognito:groups'].includes('Organizers') ? 'organizer' : 'attendee') : 
+                              'unassigned', // Set to 'unassigned' if no groups are found
                         idToken: idToken,     
                         accessToken: accessToken 
                     };
-                    showAlert('Login Successful', `Welcome, ${loggedInUser.email}! You are logged in as a ${loggedInUser.role}.`);
+                    showAlert('Login Successful', `Welcome, ${loggedInUser.email}!`);
                     
                     window.history.replaceState({}, document.title, window.location.pathname + window.location.search);
                     
-                    if (loggedInUser.role === 'organizer') {
+                    // After login, if the role is 'unassigned', go to the role selection screen
+                    if (loggedInUser.role === 'unassigned') {
+                        setView('chooseRoleAfterLogin');
+                    } else if (loggedInUser.role === 'organizer') {
                         setView('organizerDashboard');
                         fetchEventsFromAPI(); 
-                    } else {
+                    } else { // 'attendee' or any other assigned role
                         setView('attendeePortal');
                         fetchEventsFromAPI(); 
                     }
@@ -560,6 +598,60 @@
                 setView('home'); 
             }
             renderUI(); 
+        };
+
+        // --- New Function: Handle Role Assignment via API Call ---
+        const handleAssignRole = async (role) => {
+            if (!loggedInUser || !loggedInUser.id || !loggedInUser.idToken) {
+                showAlert('Error', 'You must be logged in to assign a role.');
+                setView('home');
+                return;
+            }
+
+            if (!API_GATEWAY_UPDATE_ROLE_URL || API_GATEWAY_UPDATE_ROLE_URL === 'YOUR_API_GATEWAY_URL_FOR_UPDATE_USER_ROLE') {
+                showAlert('Configuration Error', 'The API_GATEWAY_UPDATE_ROLE_URL is not configured. Cannot assign role.');
+                console.error("API_GATEWAY_UPDATE_ROLE_URL is not set!");
+                return;
+            }
+
+            try {
+                showAlert('Assigning Role', `Assigning you as a "${role}"... Please wait.`); // Show immediate feedback
+                const response = await fetch(API_GATEWAY_UPDATE_ROLE_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${loggedInUser.idToken}` // Authenticate the request
+                    },
+                    body: JSON.stringify({
+                        userId: loggedInUser.id, // User's Cognito 'sub'
+                        role: role               // 'organizer' or 'attendee'
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(`Failed to assign role: ${response.status} ${errorData.message || response.statusText}`);
+                }
+
+                const result = await response.json();
+                console.log('Role assignment successful:', result);
+                showAlert('Role Assigned!', `You are now an ${role}.`);
+
+                // Update the loggedInUser object with the new role and re-render
+                loggedInUser.role = role;
+                if (role === 'organizer') {
+                    setView('organizerDashboard');
+                    fetchEventsFromAPI();
+                } else {
+                    setView('attendeePortal');
+                    fetchEventsFromAPI();
+                }
+            } catch (error) {
+                console.error('Error assigning role:', error);
+                showAlert('Role Assignment Failed', `Could not assign role: ${error.message}. Please try again or contact support.`);
+                // If assignment fails, keep them on the role selection screen or redirect home.
+                setView('chooseRoleAfterLogin'); // Keep on selection screen if failed
+            }
         };
 
         // --- API Calls (TO YOUR AWS LAMBDA/DYNAMODB BACKEND) ---
