@@ -3,6 +3,7 @@
 
 EventSphere is a robust event management system designed to enable organizers to create events, manage attendees, issue digital tickets, and track event analytics—all powered by AWS Cloud services.
 
+App link :  <a href="https://main.d7icjcyxhs1jd.amplifyapp.com"><img src="https://img.shields.io/badge/-EventSphere-5A77ED?style=for-the-badge&logo=forage&logoColor=white" /></a>
 ---
 
 ## 🌟 Overview  
