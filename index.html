@@ -99,25 +99,24 @@
     </div>
 
     <script>
-        // --- Configuration (REPLACE WITH YOUR AWS DETAILS) ---
-        const AWS_REGION = 'us-east-1'; // YOUR AWS region (e.g., 'us-east-1', 'ap-south-1')
-        const COGNITO_USER_POOL_ID = 'us-east-1_XgyeAkGsm'; // YOUR User Pool ID
-        const COGNITO_USER_POOL_CLIENT_ID = '7jlpbpk9964imvoa9s4mdagmm8'; // YOUR User Pool App Client ID
-        const COGNITO_DOMAIN = 'eventsphere-yourname-app.auth.us-east-1.amazoncognito.com'; // YOUR Cognito Hosted UI Domain
+            // --- Configuration (REPLACE WITH YOUR AWS DETAILS) ---
+            const AWS_REGION = 'us-east-1'; // YOUR AWS region (e.g., 'us-east-1', 'ap-south-1')
+            const COGNITO_USER_POOL_ID = 'us-east-1_XgyeAkGsm'; // YOUR User Pool ID
+            const COGNITO_USER_POOL_CLIENT_ID = '7jlpbpk9964imvoa9s4mdagmm8'; // YOUR User Pool App Client ID
+            const COGNITO_DOMAIN = 'eventsphere-yourname-app.auth.us-east-1.amazoncognito.com'; // YOUR Cognito Hosted UI Domain
 
-        // API Gateway URLs - These should be the Invoke URLs for your Lambda functions via API Gateway.
-        // YOU WILL GET THESE URLs AFTER COMPLETING API GATEWAY SETUP (Part 3).
-        const API_GATEWAY_BASE_URL = 'https://02t2xh33b3.execute-api.us-east-1.amazonaws.com/dev'; // Example: https://xxxxxxxxxx.execute-api.your-region.amazonaws.com/dev
-        const API_GATEWAY_EVENTS_URL = API_GATEWAY_BASE_URL + '/events'; // Derived from base
-        const API_GATEWAY_CREATE_EVENT_URL = API_GATEWAY_BASE_URL + '/events'; // POST to /events for creation
-        const API_GATEWAY_UPDATE_ROLE_URL = API_GATEWAY_BASE_URL + '/updateRole'; // NEW: For assigning user roles
+            // API Gateway URLs - These should be the Invoke URLs for your Lambda functions via API Gateway.
+            // PASTE YOUR EXACT API GATEWAY INVOKE URL HERE
+            const API_GATEWAY_BASE_URL = 'https://wbeffnp0s3.execute-api.us-east-1.amazonaws.com/Dev'; // Example: https://abcdef123.execute-api.us-east-1.amazonaws.com/dev
+            const API_GATEWAY_EVENTS_URL = API_GATEWAY_BASE_URL + '/events'; // GET, PUT, DELETE operations on events
+            const API_GATEWAY_CREATE_EVENT_URL = API_GATEWAY_BASE_URL + '/events'; // POST operation for creating events
+            const API_GATEWAY_UPDATE_ROLE_URL = API_GATEWAY_BASE_URL + '/updateRole'; // POST operation for assigning user roles
 
-        // IMPORTANT: These redirect URLs MUST be explicitly added to "Allowed callback URLs"
-        // and "Allowed sign-out URLs" in your Cognito User Pool App Client settings.
-        // This is your deployed Amplify Hosting HTTPS URL.
-        const REDIRECT_SIGN_IN_URL = 'https://main.d7icjcyxhs1jd.amplifyapp.com/'; 
-        const REDIRECT_SIGN_OUT_URL = 'https://main.d7icjcyxhs1jd.amplifyapp.com/'; 
-
+            // IMPORTANT: These redirect URLs MUST be explicitly added to "Allowed callback URLs"
+            // and "Allowed sign-out URLs" in your Cognito User Pool App Client settings.
+            const REDIRECT_SIGN_IN_URL = 'https://main.d7icjcyxhs1jd.amplifyapp.com/'; 
+            const REDIRECT_SIGN_OUT_URL = 'https://main.d7icjcyxhs1jd.amplifyapp.com/'; 
+    
 
         // --- Global State Variables ---
         let loggedInUser = null; 
