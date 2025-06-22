@@ -70,7 +70,7 @@
             </div>
             <div class="flex items-center gap-4">
                 <button onclick="setView('home')" class="nav-btn" title="Home">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-home"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> <span class="hidden sm:inline">Home</span>
+                    ${getIconSVG('home', 20)} <span class="hidden sm:inline">Home</span>
                 </button>
                 <div id="auth-buttons">
                     <!-- Auth buttons will be rendered here by JS -->
@@ -106,12 +106,12 @@
         const COGNITO_DOMAIN = 'eventsphere-yourname-app.auth.us-east-1.amazoncognito.com'; // YOUR Cognito Hosted UI Domain
 
         // API Gateway URLs - These should be the Invoke URLs for your Lambda functions via API Gateway.
-        // PASTE YOUR EXACT API GATEWAY INVOKE URL HERE
-        const API_GATEWAY_BASE_URL = 'https://wbeffnp0s3.execute-api.us-east-1.amazonaws.com/Dev'; // Example: https://abcdef123.execute-api.us-east-1.amazonaws.com/dev
-        const API_GATEWAY_EVENTS_URL = API_GATEWAY_BASE_URL + '/events'; // GET, PUT, DELETE operations on events
-        const API_GATEWAY_CREATE_EVENT_URL = API_GATEWAY_BASE_URL + '/events'; // POST operation for creating events
-        const API_GATEWAY_UPDATE_ROLE_URL = API_GATEWAY_BASE_URL + '/updateRole'; // POST operation for assigning user roles
-        const API_GATEWAY_GET_TICKET_URL = API_GATEWAY_BASE_URL + '/ticket'; // NEW: For getting pre-signed ticket URL
+        // PASTE YOUR EXACT API GATEWAY INVOKE URL HERE (e.g., https://abcdef123.execute-api.us-east-1.amazonaws.com/dev)
+        const API_GATEWAY_BASE_URL = 'https://8t48bgp8t6.execute-api.us-east-1.amazonaws.com/dev'; 
+        const API_GATEWAY_EVENTS_URL = API_GATEWAY_BASE_URL + '/events'; 
+        const API_GATEWAY_CREATE_EVENT_URL = API_GATEWAY_BASE_URL + '/events'; 
+        const API_GATEWAY_UPDATE_ROLE_URL = API_GATEWAY_BASE_URL + '/updateRole'; 
+        const API_GATEWAY_GET_TICKET_URL = API_GATEWAY_BASE_URL + '/ticket'; 
 
         // IMPORTANT: These redirect URLs MUST be explicitly added to "Allowed callback URLs"
         // and "Allowed sign-out URLs" in your Cognito User Pool App Client settings.
@@ -123,7 +123,7 @@
         let loggedInUser = null; 
         let events = []; 
         let currentEvent = null; 
-        let currentView = 'home'; // 'home', 'signupRoleSelection', 'chooseRoleAfterLogin', 'organizerDashboard', 'attendeePortal', 'eventDetails', 'createEvent'
+        let currentView = 'home'; 
         let editingEventId = null; 
         let form = { name: '', date: '', description: '', location: '', organizerId: '' }; 
 
@@ -519,7 +519,7 @@
         // --- View Navigation ---
         const setView = (viewName) => {
             currentView = viewName;
-            renderUI(); // Call renderUI to update the displayed content
+            renderUI(); 
         };
 
         // --- Mock Event Data (Initial Load) ---
@@ -539,7 +539,6 @@
         };
 
         const redirectToCognitoSignup = () => {
-            // This now leads to the generic Hosted UI signup, no role info passed directly here.
             const signupUrl = `https://${COGNITO_DOMAIN}/signup?response_type=token&client_id=${COGNITO_USER_POOL_CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_SIGN_IN_URL)}`;
             window.location.assign(signupUrl);
         };
@@ -563,8 +562,6 @@
                     loggedInUser = {
                         id: payload.sub, 
                         email: payload.email, 
-                        // Determine role based on 'cognito:groups' claim (case-sensitive)
-                        // If user has no 'cognito:groups' claim (new signup), set role to 'unassigned'.
                         role: (payload['cognito:groups'] && payload['cognito:groups'].length > 0) ? 
                               (payload['cognito:groups'].includes('Organizers') ? 'organizer' : 'attendee') : 
                               'unassigned', 
@@ -575,13 +572,12 @@
                     
                     window.history.replaceState({}, document.title, window.location.pathname + window.location.search);
                     
-                    // After login, if the role is 'unassigned', go to the role selection screen
                     if (loggedInUser.role === 'unassigned') {
                         setView('chooseRoleAfterLogin');
                     } else if (loggedInUser.role === 'organizer') {
                         setView('organizerDashboard');
                         fetchEventsFromAPI(); 
-                    } else { // 'attendee' or any other assigned role
+                    } else { 
                         setView('attendeePortal');
                         fetchEventsFromAPI(); 
                     }
@@ -744,7 +740,7 @@
                         }
                     });
                     if (!response.ok) {
-                         const errorData = await response.json();
+                        const errorData = await response.json();
                         throw new Error(`API error: ${response.status} ${errorData.message || response.statusText}`);
                     }
                     showAlert('Success', 'Event deleted successfully!');
@@ -876,7 +872,6 @@
         // --- Initial Application Load Logic ---
         document.addEventListener('DOMContentLoaded', () => {
             parseCognitoTokens(); 
-            // loadInitialMockData() is called inside parseCognitoTokens if not logged in
         });
     </script>
 </body>
