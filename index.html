@@ -99,24 +99,25 @@
     </div>
 
     <script>
-            // --- Configuration (REPLACE WITH YOUR AWS DETAILS) ---
-            const AWS_REGION = 'us-east-1'; // YOUR AWS region (e.g., 'us-east-1', 'ap-south-1')
-            const COGNITO_USER_POOL_ID = 'us-east-1_XgyeAkGsm'; // YOUR User Pool ID
-            const COGNITO_USER_POOL_CLIENT_ID = '7jlpbpk9964imvoa9s4mdagmm8'; // YOUR User Pool App Client ID
-            const COGNITO_DOMAIN = 'eventsphere-yourname-app.auth.us-east-1.amazoncognito.com'; // YOUR Cognito Hosted UI Domain
+        // --- Configuration (REPLACE WITH YOUR AWS DETAILS) ---
+        const AWS_REGION = 'us-east-1'; // YOUR AWS region (e.g., 'us-east-1', 'ap-south-1')
+        const COGNITO_USER_POOL_ID = 'us-east-1_XgyeAkGsm'; // YOUR User Pool ID
+        const COGNITO_USER_POOL_CLIENT_ID = '7jlpbpk9964imvoa9s4mdagmm8'; // YOUR User Pool App Client ID
+        const COGNITO_DOMAIN = 'eventsphere-yourname-app.auth.us-east-1.amazoncognito.com'; // YOUR Cognito Hosted UI Domain
 
-            // API Gateway URLs - These should be the Invoke URLs for your Lambda functions via API Gateway.
-            // PASTE YOUR EXACT API GATEWAY INVOKE URL HERE
-            const API_GATEWAY_BASE_URL = 'https://wbeffnp0s3.execute-api.us-east-1.amazonaws.com/Dev'; // Example: https://abcdef123.execute-api.us-east-1.amazonaws.com/dev
-            const API_GATEWAY_EVENTS_URL = API_GATEWAY_BASE_URL + '/events'; // GET, PUT, DELETE operations on events
-            const API_GATEWAY_CREATE_EVENT_URL = API_GATEWAY_BASE_URL + '/events'; // POST operation for creating events
-            const API_GATEWAY_UPDATE_ROLE_URL = API_GATEWAY_BASE_URL + '/updateRole'; // POST operation for assigning user roles
+        // API Gateway URLs - These should be the Invoke URLs for your Lambda functions via API Gateway.
+        // PASTE YOUR EXACT API GATEWAY INVOKE URL HERE
+        const API_GATEWAY_BASE_URL = 'https://wbeffnp0s3.execute-api.us-east-1.amazonaws.com/Dev'; // Example: https://abcdef123.execute-api.us-east-1.amazonaws.com/dev
+        const API_GATEWAY_EVENTS_URL = API_GATEWAY_BASE_URL + '/events'; // GET, PUT, DELETE operations on events
+        const API_GATEWAY_CREATE_EVENT_URL = API_GATEWAY_BASE_URL + '/events'; // POST operation for creating events
+        const API_GATEWAY_UPDATE_ROLE_URL = API_GATEWAY_BASE_URL + '/updateRole'; // POST operation for assigning user roles
+        const API_GATEWAY_GET_TICKET_URL = API_GATEWAY_BASE_URL + '/ticket'; // NEW: For getting pre-signed ticket URL
 
-            // IMPORTANT: These redirect URLs MUST be explicitly added to "Allowed callback URLs"
-            // and "Allowed sign-out URLs" in your Cognito User Pool App Client settings.
-            const REDIRECT_SIGN_IN_URL = 'https://main.d7icjcyxhs1jd.amplifyapp.com/'; 
-            const REDIRECT_SIGN_OUT_URL = 'https://main.d7icjcyxhs1jd.amplifyapp.com/'; 
-    
+        // IMPORTANT: These redirect URLs MUST be explicitly added to "Allowed callback URLs"
+        // and "Allowed sign-out URLs" in your Cognito User Pool App Client settings.
+        const REDIRECT_SIGN_IN_URL = 'https://main.d7icjcyxhs1jd.amplifyapp.com/'; 
+        const REDIRECT_SIGN_OUT_URL = 'https://main.d7icjcyxhs1jd.amplifyapp.com/'; 
+
 
         // --- Global State Variables ---
         let loggedInUser = null; 
@@ -579,11 +580,10 @@
                         setView('chooseRoleAfterLogin');
                     } else if (loggedInUser.role === 'organizer') {
                         setView('organizerDashboard');
-                        // No need to fetch events here, as we're focusing on role assignment first.
-                        // We will add event fetching later once core event Lambdas are ready.
+                        fetchEventsFromAPI(); 
                     } else { // 'attendee' or any other assigned role
                         setView('attendeePortal');
-                        // No need to fetch events here.
+                        fetchEventsFromAPI(); 
                     }
                 } catch (e) {
                     console.error("Error parsing ID token:", e);
@@ -610,7 +610,6 @@
                 return;
             }
 
-            // IMPORTANT: API_GATEWAY_UPDATE_ROLE_URL needs to be set in the configuration section above.
             if (!API_GATEWAY_UPDATE_ROLE_URL || API_GATEWAY_UPDATE_ROLE_URL.includes('YOUR_API_GATEWAY_INVOKE_URL_HERE')) {
                 showAlert('Configuration Error', 'The API_GATEWAY_UPDATE_ROLE_URL is not configured. Cannot assign role.');
                 console.error("API_GATEWAY_UPDATE_ROLE_URL is not set!");
@@ -626,8 +625,8 @@
                         'Authorization': `Bearer ${loggedInUser.idToken}` 
                     },
                     body: JSON.stringify({
-                        userId: loggedInUser.id, // User's Cognito 'sub'
-                        role: role               // 'organizer' or 'attendee'
+                        userId: loggedInUser.id, 
+                        role: role               
                     })
                 });
 
@@ -640,8 +639,6 @@
                 console.log('Role assignment successful:', result);
                 showAlert('Role Assigned!', `You are now an ${role}. Please log in again to confirm the updated role in your token.`);
 
-                // After successful role assignment, force a logout to get a fresh ID token with updated groups.
-                // This is the most reliable way for the frontend to get the new role.
                 handleLogout(); 
 
             } catch (error) {
@@ -651,33 +648,219 @@
             }
         };
 
-        // --- API Calls (Stubs for now, will be implemented with backend) ---
-        // These functions will interact with your DynamoDB and S3 backend later.
-        // For now, they might just show mock data or simple alerts.
-
+        // --- API Calls (Backend Integration) ---
         const fetchEventsFromAPI = async () => {
-            console.warn('fetchEventsFromAPI: Backend integration not fully complete for events yet. Showing mock data.');
-            loadInitialMockData(); // Always show mock data until full backend is ready
+            if (!loggedInUser) {
+                console.warn('Cannot fetch events: No user logged in. Displaying mock data.');
+                loadInitialMockData();
+                return; 
+            }
+
+            try {
+                const response = await fetch(API_GATEWAY_EVENTS_URL, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${loggedInUser.idToken}` 
+                    }
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json(); 
+                    throw new Error(`API error: ${response.status} ${errorData.message || response.statusText}`);
+                }
+
+                const data = await response.json();
+                events = data.events || data; 
+                console.log('Fetched events successfully:', events);
+                renderUI(); 
+            } catch (error) {
+                console.error('Error fetching events:', error);
+                showAlert('Error', `Failed to load events from backend: ${error.message}. Please check your API Gateway URL and Lambda permissions. Displaying mock data.`);
+                loadInitialMockData();
+            }
         };
 
         const handleCreateOrUpdateEvent = async ({ name, date, location, description }) => {
-            showAlert('Feature Not Ready', 'Event creation/update backend integration is coming soon!');
-            console.warn('handleCreateOrUpdateEvent: Backend not fully integrated yet.');
+            if (!loggedInUser || loggedInUser.role !== 'organizer') {
+                showAlert('Error', 'Unauthorized: Only organizers can create/edit events.');
+                return;
+            }
+            if (!name || !date || !location) {
+                showAlert('Input Error', 'Event Name, Date, and Location are required.');
+                return;
+            }
+
+            const eventData = {
+                id: editingEventId || `e-${Date.now()}`, 
+                name,
+                date,
+                location,
+                description,
+                organizerId: loggedInUser.id, 
+                registeredAttendees: editingEventId ? (events.find(e => e.id === editingEventId)?.registeredAttendees || []) : []
+            };
+
+            const method = editingEventId ? 'PUT' : 'POST';
+            const apiUrl = editingEventId ? `${API_GATEWAY_EVENTS_URL}/${editingEventId}` : API_GATEWAY_CREATE_EVENT_URL; 
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${loggedInUser.idToken}` 
+                    },
+                    body: JSON.stringify(eventData) 
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(`API error: ${response.status} ${errorData.message || response.statusText}`);
+                }
+
+                showAlert('Success', `Event ${editingEventId ? 'updated' : 'created'} successfully!`);
+                editingEventId = null; 
+                form = { name: '', date: '', description: '', location: '', organizerId: '' }; 
+                await fetchEventsFromAPI(); 
+                setView('organizerDashboard'); 
+            } catch (error) {
+                console.error('Error creating/updating event:', error);
+                showAlert('Error', `Failed to ${editingEventId ? 'update' : 'create'} event: ${error.message}. Please check your Lambda logic and API Gateway setup.`);
+            }
         };
 
         const handleDeleteEvent = (id) => {
-            showAlert('Feature Not Ready', 'Event deletion backend integration is coming soon!');
-            console.warn('handleDeleteEvent: Backend not fully integrated yet.');
+            showConfirm('Delete Event', 'Are you sure you want to delete this event? This action cannot be undone.', async () => {
+                if (!loggedInUser || loggedInUser.role !== 'organizer') {
+                    showAlert('Error', 'Unauthorized: Only organizers can delete events.');
+                    return;
+                }
+                try {
+                    const response = await fetch(`${API_GATEWAY_EVENTS_URL}/${id}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'Authorization': `Bearer ${loggedInUser.idToken}` 
+                        }
+                    });
+                    if (!response.ok) {
+                         const errorData = await response.json();
+                        throw new Error(`API error: ${response.status} ${errorData.message || response.statusText}`);
+                    }
+                    showAlert('Success', 'Event deleted successfully!');
+                    await fetchEventsFromAPI(); 
+                    setView('organizerDashboard');
+                } catch (error) {
+                    console.error('Error deleting event:', error);
+                    showAlert('Error', `Failed to delete event: ${error.message}.`);
+                }
+            });
         };
 
         const handleRegisterForEvent = async (eventId) => {
-            showAlert('Feature Not Ready', 'Event registration backend integration is coming soon!');
-            console.warn('handleRegisterForEvent: Backend not fully integrated yet.');
+            if (!loggedInUser || loggedInUser.role !== 'attendee') {
+                showAlert('Error', 'Please log in as an attendee to register.');
+                return;
+            }
+
+            const eventToRegister = events.find(e => e.id === eventId);
+            if (!eventToRegister) {
+                showAlert('Error', 'Event not found.');
+                return;
+            }
+            // Check if already registered
+            if (eventToRegister.registeredAttendees.includes(loggedInUser.id)) {
+                showAlert('Already Registered', 'You are already registered for this event.');
+                return;
+            }
+
+            try {
+                // Frontend updates the attendees array locally before sending to backend
+                const updatedAttendees = [...eventToRegister.registeredAttendees, loggedInUser.id];
+                
+                const response = await fetch(`${API_GATEWAY_EVENTS_URL}/${eventId}`, { 
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${loggedInUser.idToken}` 
+                    },
+                    body: JSON.stringify({ registeredAttendees: updatedAttendees }) // Only send the updated attendees array
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(`API error: ${response.status} ${errorData.message || response.statusText}`);
+                }
+                showAlert('Registration Successful', `You have successfully registered for "${eventToRegister.name}"!`);
+                await fetchEventsFromAPI(); 
+            } catch (error) {
+                console.error('Error registering for event:', error);
+                showAlert('Error', `Failed to register for event: ${error.message}.`);
+            }
         };
 
-        const handleDownloadTicket = (eventId) => {
-            showAlert('Feature Not Ready', 'Ticket download backend integration is coming soon!');
-            console.warn('handleDownloadTicket: Backend not fully integrated yet.');
+        const handleDownloadTicket = async (eventId) => {
+            if (!loggedInUser || loggedInUser.role !== 'attendee') {
+                showAlert('Error', 'Please log in as an attendee to download tickets.');
+                return;
+            }
+
+            const event = events.find(e => e.id === eventId);
+            if (!event) {
+                showAlert('Error', 'Event not found.');
+                return;
+            }
+            if (!event.registeredAttendees.includes(loggedInUser.id)) {
+                showAlert('Not Registered', 'You are not registered for this event. Please register first.');
+                return;
+            }
+
+            if (!API_GATEWAY_GET_TICKET_URL || API_GATEWAY_GET_TICKET_URL.includes('YOUR_API_GATEWAY_INVOKE_URL_HERE')) {
+                showAlert('Configuration Error', 'The API_GATEWAY_GET_TICKET_URL is not configured. Cannot download ticket.');
+                console.error("API_GATEWAY_GET_TICKET_URL is not set!");
+                return;
+            }
+
+            try {
+                showAlert('Generating Ticket', 'Fetching your ticket. This may take a moment...');
+
+                const response = await fetch(API_GATEWAY_GET_TICKET_URL, {
+                    method: 'POST', 
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${loggedInUser.idToken}` 
+                    },
+                    body: JSON.stringify({
+                        eventId: event.id,
+                        eventName: event.name,
+                        eventDate: event.date,
+                        eventLocation: event.location,
+                        attendeeId: loggedInUser.id,
+                        attendeeEmail: loggedInUser.email 
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(`API error: ${response.status} ${errorData.message || response.statusText}`);
+                }
+
+                const data = await response.json();
+                const ticketUrl = data.ticketUrl;
+
+                if (ticketUrl) {
+                    showAlert('Ticket Ready!', 'Your ticket is ready. Clicking OK will open the download.');
+                    window.open(ticketUrl, '_blank');
+                    currentEvent = event; 
+                    renderUI(); 
+                } else {
+                    throw new Error('No ticket URL received from backend.');
+                }
+
+            } catch (error) {
+                console.error('Error downloading ticket:', error);
+                showAlert('Ticket Download Failed', `Could not download ticket: ${error.message}. Please try again or contact support.`);
+            }
         };
 
         const handleMockPayment = (amount, currency, eventName) => {
