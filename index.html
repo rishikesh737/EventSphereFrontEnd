@@ -9,22 +9,29 @@
     <!-- Google Font: Inter -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
     <style>
+        /* Ensure html and body take full height */
+        html, body {
+            height: 100%; 
+        }
         body {
             font-family: 'Inter', sans-serif;
             margin: 0;
-            min-height: 100vh;
+            min-height: 100vh; /* Ensures body is at least viewport height */
             display: flex;
             flex-direction: column;
             background: linear-gradient(to bottom right, #8B5CF6, #3B82F6); /* Purple to Blue Gradient */
             color: #E5E7EB; /* Light gray text */
         }
         #app-container {
-            flex-grow: 1;
+            flex-grow: 1; /* Allows container to grow and take available space */
             display: flex;
             flex-direction: column;
-            align-items: center;
-            padding: 1rem;
+            align-items: center; /* Center content horizontally */
+            padding: 1rem; /* Overall padding */
+            width: 100%; /* Ensure it takes full width */
+            box-sizing: border-box; /* Include padding in width/height calculation */
         }
+        /* Navigation button styling */
         .nav-btn {
             background-color: rgba(255, 255, 255, 0.2);
             color: white;
@@ -35,51 +42,65 @@
             display: flex;
             align-items: center;
             gap: 0.5rem;
-            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06); /* Slightly more pronounced shadow */
+            border: 1px solid rgba(255, 255, 255, 0.3); /* Subtle border for definition */
+            backdrop-filter: blur(5px); /* Ensure blur is applied */
         }
         .nav-btn:hover {
             background-color: rgba(255, 255, 255, 0.3);
-            transform: scale(1.05);
+            transform: translateY(-2px); /* Slight lift effect */
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); /* Larger shadow on hover */
         }
+        /* Form element styling */
         .form-input, .form-textarea, .form-select {
             width: 100%;
             padding: 0.75rem;
             border-radius: 0.5rem; /* rounded-lg */
-            background-color: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.3);
+            background-color: rgba(255, 255, 255, 0.15); /* Slightly less transparent */
+            border: 1px solid rgba(255, 255, 255, 0.4); /* Stronger border */
             color: #E5E7EB;
             outline: none;
             transition: all 0.2s ease-in-out;
         }
         .form-input::placeholder, .form-textarea::placeholder {
-            color: #A0AEC0; /* Gray-400 */
+            color: #CBD5E0; /* Lighter gray for placeholder */
         }
         .form-input:focus, .form-textarea:focus, .form-select:focus {
             border-color: #6366F1; /* Indigo-500 */
-            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.5); /* Ring-2 for focus */
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.6); /* Thicker ring on focus */
+            background-color: rgba(255, 255, 255, 0.25); /* More opaque on focus */
+        }
+
+        /* General card/content box styling */
+        .content-card {
+            background-color: rgba(255, 255, 255, 0.2); /* Slightly lighter background */
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 1.25rem; /* rounded-xl for content cards */
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); /* Deeper shadow */
         }
     </style>
 </head>
 <body>
     <div id="app-container">
-        <!-- Navigation Bar -->
-        <nav class="bg-white bg-opacity-20 backdrop-filter backdrop-blur-lg rounded-full px-6 py-3 mb-8 shadow-lg flex justify-between items-center z-10 sticky top-4 max-w-7xl w-full">
+        <!-- Navigation Bar - Fixed at the top, spans full width, transparent, with blur -->
+        <nav class="fixed top-0 left-0 w-full bg-white bg-opacity-20 backdrop-filter backdrop-blur-lg px-6 py-3 shadow-lg flex justify-between items-center z-50">
             <div class="flex items-center gap-3">
-                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-calendar text-white drop-shadow"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-calendar text-white drop-shadow-lg"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
                 <h1 class="text-3xl font-extrabold text-white drop-shadow-lg">EventSphere</h1>
             </div>
             <div class="flex items-center gap-4">
+                <!-- Corrected Home button: Only text, no icon here for nav consistency -->
                 <button onclick="setView('home')" class="nav-btn" title="Home">
-                    ${getIconSVG('home', 20)} <span class="hidden sm:inline">Home</span>
+                    Home
                 </button>
-                <div id="auth-buttons">
+                <div id="auth-buttons" class="flex items-center gap-2">
                     <!-- Auth buttons will be rendered here by JS -->
                 </div>
             </div>
         </nav>
 
-        <!-- Main Content Area -->
-        <main class="flex-grow flex items-start justify-center py-8 w-full max-w-5xl">
+        <!-- Main Content Area - Pushed down to clear the fixed header -->
+        <main class="flex-grow flex items-start justify-center pt-24 pb-8 w-full max-w-5xl"> 
             <div id="content-area" class="container mx-auto w-full">
                 <!-- Content will be rendered here by JS -->
             </div>
@@ -100,14 +121,23 @@
 
     <script>
         // --- Configuration (REPLACE WITH YOUR AWS DETAILS) ---
-        const AWS_REGION = 'us-east-1'; // YOUR AWS region (e.g., 'us-east-1', 'ap-south-1')
-        const COGNITO_USER_POOL_ID = 'us-east-1_XgyeAkGsm'; // YOUR User Pool ID
-        const COGNITO_USER_POOL_CLIENT_ID = '7jlpbpk9964imvoa9s4mdagmm8'; // YOUR User Pool App Client ID
-        const COGNITO_DOMAIN = 'eventsphere-yourname-app.auth.us-east-1.amazoncognito.com'; // YOUR Cognito Hosted UI Domain
+        // !!! IMPORTANT !!!
+        // Replace 'us-east-1' with your actual AWS Region if different.
+        const AWS_REGION = 'us-east-1'; 
+        
+        // Replace with your actual Cognito User Pool ID and Client ID.
+        const COGNITO_USER_POOL_ID = 'us-east-1_XgyeAkGsm'; 
+        const COGNITO_USER_POOL_CLIENT_ID = '7jlpbpk9964imvoa9s4mdagmm8'; 
+        
+        // Replace with your actual Cognito Hosted UI Domain (e.g., eventsphere-yourname-app.auth.us-east-1.amazoncognito.com)
+        const COGNITO_DOMAIN = 'eventsphere-yourname-app.auth.us-east-1.amazoncognito.com'; 
 
-        // API Gateway URLs - These should be the Invoke URLs for your Lambda functions via API Gateway.
-        // PASTE YOUR EXACT API GATEWAY INVOKE URL HERE (e.g., https://abcdef123.execute-api.us-east-1.amazonaws.com/dev)
-        const API_GATEWAY_BASE_URL = 'https://8t48bgp8t6.execute-api.us-east-1.amazonaws.com/dev'; 
+        // !!! CRITICAL: REPLACE THIS WITH YOUR ACTUAL API GATEWAY INVOKE URL !!!
+        // You get this URL from API Gateway -> Stages -> your-stage-name (e.g., 'dev') -> Invoke URL.
+        // It will look like: https://abcdef123.execute-api.us-east-1.amazonaws.com/dev
+        const API_GATEWAY_BASE_URL = 'https://YOUR_API_GATEWAY_INVOKE_URL_HERE'; 
+        
+        // These URLs will automatically use the base URL defined above.
         const API_GATEWAY_EVENTS_URL = API_GATEWAY_BASE_URL + '/events'; 
         const API_GATEWAY_CREATE_EVENT_URL = API_GATEWAY_BASE_URL + '/events'; 
         const API_GATEWAY_UPDATE_ROLE_URL = API_GATEWAY_BASE_URL + '/updateRole'; 
@@ -219,7 +249,7 @@
                 
                 authButtonsDiv.innerHTML = `
                     ${roleButtonHTML}
-                    <span class="text-white text-sm hidden md:inline">Welcome, ${loggedInUser.email}</span>
+                    <span class="text-white text-sm hidden md:inline ml-2">Welcome, ${loggedInUser.email}</span>
                     <button onclick="handleLogout()" class="nav-btn bg-red-500 hover:bg-red-600" title="Logout">
                         ${getIconSVG('login', 20)} <span class="hidden sm:inline">Logout</span>
                     </button>
@@ -240,17 +270,17 @@
             switch (currentView) {
                 case 'home':
                     htmlContent = `
-                        <div class="flex flex-col items-center justify-center text-center py-16 px-4">
-                            <h2 class="text-5xl font-extrabold mb-6 drop-shadow-lg">Welcome to EventSphere!</h2>
-                            <p class="text-xl text-gray-200 mb-10 max-w-2xl">
+                        <div class="flex flex-col items-center justify-center text-center py-16 px-4 content-card">
+                            <h2 class="text-5xl font-extrabold mb-6 drop-shadow-lg text-gray-900">Welcome to EventSphere!</h2>
+                            <p class="text-xl text-gray-700 mb-10 max-w-2xl">
                                 Your complete platform for creating, managing, and attending events.
                                 Seamlessly organize and enjoy memorable experiences.
                             </p>
-                            <div class="flex gap-6">
-                                <button onclick="redirectToCognitoLogin()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-full shadow-lg transition-all duration-300 transform hover:scale-105 flex items-center gap-2">
+                            <div class="flex flex-col sm:flex-row gap-6">
+                                <button onclick="redirectToCognitoLogin()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-full shadow-lg transition-all duration-300 transform hover:scale-105 flex items-center justify-center gap-2">
                                     ${getIconSVG('login', 24)} Login
                                 </button>
-                                <button onclick="setView('signupRoleSelection')" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-8 rounded-full shadow-lg transition-all duration-300 transform hover:scale-105 flex items-center gap-2">
+                                <button onclick="setView('signupRoleSelection')" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-8 rounded-full shadow-lg transition-all duration-300 transform hover:scale-105 flex items-center justify-center gap-2">
                                     ${getIconSVG('user-plus', 24)} Sign Up
                                 </button>
                             </div>
@@ -259,9 +289,9 @@
                     break;
                 case 'signupRoleSelection':
                     htmlContent = `
-                        <div class="max-w-md mx-auto p-8 bg-white bg-opacity-20 rounded-xl shadow-xl border border-gray-300 border-opacity-30 text-center">
+                        <div class="max-w-md mx-auto p-8 content-card text-center">
                             <h2 class="text-3xl font-bold mb-8 text-gray-900">Sign Up As...</h2>
-                            <p class="text-lg text-gray-200 mb-6">Choose your primary role for EventSphere:</p>
+                            <p class="text-lg text-gray-700 mb-6">Choose your primary role for EventSphere:</p>
                             <div class="flex flex-col gap-4">
                                 <!-- Both buttons go to generic Hosted UI signup -->
                                 <button onclick="redirectToCognitoSignup()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg flex items-center justify-center gap-2 transition-all duration-300 transform hover:scale-105 shadow-lg">
@@ -271,9 +301,9 @@
                                     ${getIconSVG('user', 24)} Event Attendee
                                 </button>
                             </div>
-                            <p class="text-center mt-6 text-gray-200">
+                            <p class="text-center mt-6 text-gray-700">
                                 Already have an account? 
-                                <button onclick="redirectToCognitoLogin()" class="text-blue-400 hover:underline font-semibold">
+                                <button onclick="redirectToCognitoLogin()" class="text-blue-600 hover:underline font-semibold">
                                     Login
                                 </button>
                             </p>
@@ -282,9 +312,9 @@
                     break;
                 case 'chooseRoleAfterLogin': // New view for role selection AFTER initial login
                     htmlContent = `
-                        <div class="max-w-md mx-auto p-8 bg-white bg-opacity-20 rounded-xl shadow-xl border border-gray-300 border-opacity-30 text-center">
+                        <div class="max-w-md mx-auto p-8 content-card text-center">
                             <h2 class="text-3xl font-bold mb-8 text-gray-900">Welcome, ${loggedInUser?.email || 'New User'}!</h2>
-                            <p class="text-lg text-gray-200 mb-6">It looks like this is your first time here, or your role hasn't been set. Please choose your role to get started:</p>
+                            <p class="text-lg text-gray-700 mb-6">It looks like this is your first time here, or your role hasn't been set. Please choose your role to get started:</p>
                             <div class="flex flex-col gap-4">
                                 <button onclick="handleAssignRole('organizer')" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg flex items-center justify-center gap-2 transition-all duration-300 transform hover:scale-105 shadow-lg">
                                     ${getIconSVG('settings', 24)} I am an Event Organizer
@@ -302,10 +332,10 @@
                     } else {
                         const myEvents = events.filter(event => event.organizerId === loggedInUser.id);
                         htmlContent = `
-                            <div class="p-4">
-                                <h2 class="text-4xl font-bold mb-8 text-center drop-shadow-lg">Organizer Dashboard</h2>
+                            <div class="p-4 w-full">
+                                <h2 class="text-4xl font-bold mb-8 text-center drop-shadow-lg text-white">Organizer Dashboard</h2>
                                 <div class="flex justify-between items-center mb-6">
-                                    <h3 class="text-2xl font-semibold">Your Events</h3>
+                                    <h3 class="text-2xl font-semibold text-white">Your Events</h3>
                                     <button onclick="setView('createEvent')" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg flex items-center gap-2 transition-all duration-300 transform hover:scale-105 shadow-md">
                                         ${getIconSVG('plus-circle', 20)} Create New Event
                                     </button>
@@ -315,7 +345,7 @@
                                 ` : `
                                     <div class="space-y-4">
                                         ${myEvents.map(event => `
-                                            <div class="bg-white bg-opacity-30 p-5 rounded-xl shadow-md flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                                            <div class="content-card p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                                                 <div>
                                                     <h3 class="text-2xl font-semibold mb-1 text-gray-900">${event.name}</h3>
                                                     <p class="text-lg text-gray-800 flex items-center gap-2 mb-1">
@@ -347,23 +377,23 @@
                         htmlContent = renderAccessDenied();
                     } else {
                         htmlContent = `
-                            <div class="max-w-xl mx-auto p-8 bg-white bg-opacity-20 rounded-xl shadow-xl border border-gray-300 border-opacity-30">
-                                <h2 class="text-3xl font-bold text-center mb-8">${editingEventId ? 'Edit Event' : 'Create New Event'}</h2>
+                            <div class="max-w-xl mx-auto p-8 content-card">
+                                <h2 class="text-3xl font-bold text-center mb-8 text-gray-900">${editingEventId ? 'Edit Event' : 'Create New Event'}</h2>
                                 <form id="event-form" class="space-y-6">
                                     <div>
-                                        <label for="eventName" class="block text-sm font-semibold mb-2">Event Name</label>
+                                        <label for="eventName" class="block text-sm font-semibold mb-2 text-gray-800">Event Name</label>
                                         <input type="text" id="eventName" class="form-input" placeholder="Concert, Workshop, Meeting..." value="${form.name}" required>
                                     </div>
                                     <div>
-                                        <label for="eventDate" class="block text-sm font-semibold mb-2">Event Date</label>
+                                        <label for="eventDate" class="block text-sm font-semibold mb-2 text-gray-800">Event Date</label>
                                         <input type="date" id="eventDate" class="form-input" value="${form.date}" required>
                                     </div>
                                     <div>
-                                        <label for="eventLocation" class="block text-sm font-semibold mb-2">Event Location</label>
+                                        <label for="eventLocation" class="block text-sm font-semibold mb-2 text-gray-800">Event Location</label>
                                         <input type="text" id="eventLocation" class="form-input" placeholder="e.g., Grand Exhibition Hall" value="${form.location}" required>
                                     </div>
                                     <div>
-                                        <label for="eventDescription" class="block text-sm font-semibold mb-2">Description (Optional)</label>
+                                        <label for="eventDescription" class="block text-sm font-semibold mb-2 text-gray-800">Description (Optional)</label>
                                         <textarea id="eventDescription" rows="4" class="form-textarea resize-y" placeholder="Brief description of the event...">${form.description}</textarea>
                                     </div>
                                     <button type="submit" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-all duration-300 transform hover:scale-105 shadow-lg">
@@ -380,14 +410,14 @@
                     } else {
                         htmlContent = `
                             <div class="p-4 w-full">
-                                <h2 class="text-4xl font-bold mb-8 text-center drop-shadow-lg">Attendee Portal</h2>
-                                <h3 class="text-2xl font-semibold mb-6">Browse Events</h3>
+                                <h2 class="text-4xl font-bold mb-8 text-center drop-shadow-lg text-white">Attendee Portal</h2>
+                                <h3 class="text-2xl font-semibold mb-6 text-white">Browse Events</h3>
                                 ${events.length === 0 ? `
                                     <p class="text-center text-lg text-gray-300">No events available at the moment.</p>
                                 ` : `
                                     <div class="space-y-6">
                                         ${events.map(event => `
-                                            <div class="bg-white bg-opacity-30 p-5 rounded-xl shadow-md flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                                            <div class="content-card p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                                                 <div>
                                                     <h3 class="text-2xl font-semibold mb-1 text-gray-900">${event.name}</h3>
                                                     <p class="text-lg text-gray-800 flex items-center gap-2 mb-1">
@@ -420,8 +450,8 @@
                                 `}
 
                                 <!-- Display QR code if a ticket was "downloaded" -->
-                                ${currentEvent && currentView === 'attendeePortal' ? `
-                                    <div class="mt-8 p-6 bg-white bg-opacity-30 rounded-xl shadow-md text-center">
+                                ${currentEvent && currentView === 'attendeePortal' && loggedInUser && currentEvent.registeredAttendees.includes(loggedInUser.id) ? `
+                                    <div class="mt-8 p-6 content-card text-center">
                                         <h3 class="text-xl font-bold mb-4 text-gray-900">Your Simulated Ticket for ${currentEvent.name}</h3>
                                         <div class="bg-white p-4 rounded-lg inline-block">
                                             ${generateQRCodeSVG(`Event:${currentEvent.name}|Date:${currentEvent.date}|User:${loggedInUser?.email || 'N/A'}|TicketID:${currentEvent.id}-${loggedInUser?.id}`, 256)}
@@ -442,7 +472,7 @@
                     } else {
                         const isRegistered = loggedInUser && currentEvent.registeredAttendees.includes(loggedInUser.id);
                         htmlContent = `
-                            <div class="max-w-2xl mx-auto p-8 bg-white bg-opacity-20 rounded-xl shadow-xl border border-gray-300 border-opacity-30">
+                            <div class="max-w-2xl mx-auto p-8 content-card">
                                 <h2 class="text-4xl font-bold mb-4 text-center text-gray-900">${currentEvent.name}</h2>
                                 <p class="text-lg text-gray-800 mb-2 flex items-center gap-2 justify-center">
                                     ${getIconSVG('calendar', 20)} ${currentEvent.date} at ${currentEvent.location}
@@ -452,11 +482,11 @@
                                 <div class="flex justify-center gap-4 mb-8">
                                     ${loggedInUser && loggedInUser.role === 'attendee' ? (
                                         !isRegistered ? `
-                                            <button onclick="handleRegisterForEvent('${currentEvent.id}'); handleMockPayment(99.99, 'USD', '${currentEvent.name}');" class="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-lg flex items-center gap-2 transition-all duration-300 transform hover:scale-105 shadow-md">
+                                            <button onclick="handleRegisterForEvent('${currentEvent.id}'); handleMockPayment(99.99, 'USD', '${currentEvent.name}');" class="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-lg flex items-center justify-center gap-2 transition-all duration-300 transform hover:scale-105 shadow-md">
                                                 ${getIconSVG('credit-card', 20)} Register & Pay (Mock)
                                             </button>
                                         ` : `
-                                            <button onclick="handleDownloadTicket('${currentEvent.id}')" class="bg-purple-500 hover:bg-purple-600 text-white font-bold py-3 px-6 rounded-lg flex items-center gap-2 transition-all duration-300 transform hover:scale-105 shadow-md">
+                                            <button onclick="handleDownloadTicket('${currentEvent.id}')" class="bg-purple-500 hover:bg-purple-600 text-white font-bold py-3 px-6 rounded-lg flex items-center justify-center gap-2 transition-all duration-300 transform hover:scale-105 shadow-md">
                                                 ${getIconSVG('download', 20)} Download Ticket
                                             </button>
                                         `
@@ -464,7 +494,7 @@
                                 </div>
 
                                 ${isRegistered ? `
-                                    <div class="mt-6 p-6 bg-white bg-opacity-30 rounded-xl shadow-md text-center">
+                                    <div class="mt-6 p-6 content-card text-center">
                                         <h3 class="text-xl font-bold mb-4 text-gray-900">Your Ticket QR Code</h3>
                                         <div class="bg-white p-4 rounded-lg inline-block">
                                             ${generateQRCodeSVG(`Event:${currentEvent.name}|Date:${currentEvent.date}|User:${loggedInUser?.email || 'N/A'}|TicketID:${currentEvent.id}-${loggedInUser?.id}`, 256)}
@@ -507,9 +537,9 @@
         };
 
         const renderAccessDenied = () => `
-            <div class="text-center p-10 bg-white bg-opacity-20 rounded-xl shadow-xl">
-                <h2 class="text-3xl font-bold mb-4">Access Denied</h2>
-                <p class="text-lg text-gray-200">Please log in to access this section.</p>
+            <div class="text-center p-10 content-card">
+                <h2 class="text-3xl font-bold mb-4 text-gray-900">Access Denied</h2>
+                <p class="text-lg text-gray-700">Please log in to access this section.</p>
                 <button onclick="redirectToCognitoLogin()" class="mt-6 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-5 rounded-lg">
                     Go to Login
                 </button>
@@ -606,9 +636,10 @@
                 return;
             }
 
+            // --- IMPORTANT: Ensure API_GATEWAY_UPDATE_ROLE_URL is set! ---
             if (!API_GATEWAY_UPDATE_ROLE_URL || API_GATEWAY_UPDATE_ROLE_URL.includes('YOUR_API_GATEWAY_INVOKE_URL_HERE')) {
-                showAlert('Configuration Error', 'The API_GATEWAY_UPDATE_ROLE_URL is not configured. Cannot assign role.');
-                console.error("API_GATEWAY_UPDATE_ROLE_URL is not set!");
+                showAlert('Configuration Error', 'The API_GATEWAY_UPDATE_ROLE_URL is not configured. Please update it in index.html.');
+                console.error("API_GATEWAY_UPDATE_ROLE_URL is not set! Please replace 'YOUR_API_GATEWAY_INVOKE_URL_HERE' with your actual API Gateway Invoke URL.");
                 return;
             }
 
@@ -652,6 +683,14 @@
                 return; 
             }
 
+            // --- IMPORTANT: Ensure API_GATEWAY_EVENTS_URL is set! ---
+            if (!API_GATEWAY_EVENTS_URL || API_GATEWAY_EVENTS_URL.includes('YOUR_API_GATEWAY_INVOKE_URL_HERE')) {
+                showAlert('Configuration Error', 'The API_GATEWAY_EVENTS_URL is not configured. Please update it in index.html.');
+                console.error("API_GATEWAY_EVENTS_URL is not set! Please replace 'YOUR_API_GATEWAY_INVOKE_URL_HERE' with your actual API Gateway Invoke URL.");
+                loadInitialMockData(); // Fallback to mock data if API URL is missing
+                return;
+            }
+
             try {
                 const response = await fetch(API_GATEWAY_EVENTS_URL, {
                     method: 'GET',
@@ -684,6 +723,13 @@
             }
             if (!name || !date || !location) {
                 showAlert('Input Error', 'Event Name, Date, and Location are required.');
+                return;
+            }
+
+            // --- IMPORTANT: Ensure API_GATEWAY_CREATE_EVENT_URL is set! ---
+            if (!API_GATEWAY_CREATE_EVENT_URL || API_GATEWAY_CREATE_EVENT_URL.includes('YOUR_API_GATEWAY_INVOKE_URL_HERE')) {
+                showAlert('Configuration Error', 'The API_GATEWAY_CREATE_EVENT_URL is not configured. Please update it in index.html.');
+                console.error("API_GATEWAY_CREATE_EVENT_URL is not set! Please replace 'YOUR_API_GATEWAY_INVOKE_URL_HERE' with your actual API Gateway Invoke URL.");
                 return;
             }
 
@@ -732,6 +778,14 @@
                     showAlert('Error', 'Unauthorized: Only organizers can delete events.');
                     return;
                 }
+                
+                // --- IMPORTANT: Ensure API_GATEWAY_EVENTS_URL is set! ---
+                if (!API_GATEWAY_EVENTS_URL || API_GATEWAY_EVENTS_URL.includes('YOUR_API_GATEWAY_INVOKE_URL_HERE')) {
+                    showAlert('Configuration Error', 'The API_GATEWAY_EVENTS_URL for deletion is not configured. Please update it in index.html.');
+                    console.error("API_GATEWAY_EVENTS_URL is not set! Please replace 'YOUR_API_GATEWAY_INVOKE_URL_HERE' with your actual API Gateway Invoke URL.");
+                    return;
+                }
+
                 try {
                     const response = await fetch(`${API_GATEWAY_EVENTS_URL}/${id}`, {
                         method: 'DELETE',
@@ -767,6 +821,13 @@
             // Check if already registered
             if (eventToRegister.registeredAttendees.includes(loggedInUser.id)) {
                 showAlert('Already Registered', 'You are already registered for this event.');
+                return;
+            }
+
+            // --- IMPORTANT: Ensure API_GATEWAY_EVENTS_URL is set! ---
+            if (!API_GATEWAY_EVENTS_URL || API_GATEWAY_EVENTS_URL.includes('YOUR_API_GATEWAY_INVOKE_URL_HERE')) {
+                showAlert('Configuration Error', 'The API_GATEWAY_EVENTS_URL for registration is not configured. Please update it in index.html.');
+                console.error("API_GATEWAY_EVENTS_URL is not set! Please replace 'YOUR_API_GATEWAY_INVOKE_URL_HERE' with your actual API Gateway Invoke URL.");
                 return;
             }
 
@@ -811,9 +872,10 @@
                 return;
             }
 
+            // --- IMPORTANT: Ensure API_GATEWAY_GET_TICKET_URL is set! ---
             if (!API_GATEWAY_GET_TICKET_URL || API_GATEWAY_GET_TICKET_URL.includes('YOUR_API_GATEWAY_INVOKE_URL_HERE')) {
-                showAlert('Configuration Error', 'The API_GATEWAY_GET_TICKET_URL is not configured. Cannot download ticket.');
-                console.error("API_GATEWAY_GET_TICKET_URL is not set!");
+                showAlert('Configuration Error', 'The API_GATEWAY_GET_TICKET_URL is not configured. Please update it in index.html.');
+                console.error("API_GATEWAY_GET_TICKET_URL is not set! Please replace 'YOUR_API_GATEWAY_INVOKE_URL_HERE' with your actual API Gateway Invoke URL.");
                 return;
             }
 
