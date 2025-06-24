@@ -147,6 +147,9 @@
         let editingEventId = null; 
         let form = { name: '', date: '', description: '', location: '', organizerId: '' }; 
 
+        // Store the ticket URL returned from generateTicketPDF Lambda
+        let generatedTicketUrl = null;
+
 
         // --- Helper Functions (UI & Data) ---
 
@@ -430,7 +433,7 @@
                                                     ${event.description ? `<p class="text-gray-700 text-sm italic">${event.description}</p>` : ''}
                                                     ${loggedInUser && event.registeredAttendees.includes(loggedInUser.id) ? `
                                                         <p class="text-green-700 text-md font-semibold mt-2 flex items-center gap-1">
-                                                            ${getIconSVG('qr-code', 18)} You are registered!
+                                                            You are registered!
                                                         </p>
                                                     ` : ''}
                                                 </div>
@@ -453,15 +456,15 @@
                                     </div>
                                 `}
 
-                                <!-- Display QR code if a ticket was "downloaded" -->
-                                ${currentEvent && currentView === 'attendeePortal' && loggedInUser && currentEvent.registeredAttendees.includes(loggedInUser.id) ? `
+                                <!-- Display QR code if a ticket was "downloaded" and currentEvent is set -->
+                                ${currentEvent && currentView === 'attendeePortal' && loggedInUser && currentEvent.registeredAttendees.includes(loggedInUser.id) && generatedTicketUrl ? `
                                     <div class="mt-8 p-6 content-card text-center">
-                                        <h3 class="text-xl font-bold mb-4 text-gray-900">Your Simulated Ticket for ${currentEvent.name}</h3>
+                                        <h3 class="text-xl font-bold mb-4 text-gray-900">Your Ticket QR Code for ${currentEvent.name}</h3>
                                         <!-- QR code will be generated into this div -->
                                         <div class="bg-white p-4 rounded-lg inline-block" id="attendee-ticket-qrcode-display">
                                             </div>
-                                        <p class="text-gray-800 text-sm mt-4">This QR code serves as your entry pass.</p>
-                                        <button onclick="setCurrentEvent(null); renderUI();" class="mt-4 bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg transition-colors">
+                                        <p class="text-gray-800 text-sm mt-4">Scan this QR code to download your ticket.</p>
+                                        <button onclick="setCurrentEvent(null); generatedTicketUrl = null; renderUI();" class="mt-4 bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg transition-colors">
                                             Close Ticket Preview
                                         </button>
                                     </div>
@@ -497,14 +500,14 @@
                                     ) : ''}
                                 </div>
 
-                                ${isRegistered ? `
+                                ${isRegistered && generatedTicketUrl ? `
                                     <div class="mt-6 p-6 content-card text-center">
                                         <h3 class="text-xl font-bold mb-4 text-gray-900">Your Ticket QR Code</h3>
                                         <!-- QR code will be generated into this div -->
                                         <div class="bg-white p-4 rounded-lg inline-block" id="event-details-qrcode-display">
                                         </div>
-                                        <p class="text-gray-800 text-sm mt-4">This QR code serves as your entry pass.</p>
-                                        <button onclick="setCurrentEvent(null); setView('attendeePortal');" class="mt-4 bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg transition-colors">
+                                        <p class="text-gray-800 text-sm mt-4">Scan this QR code to download your ticket.</p>
+                                        <button onclick="setCurrentEvent(null); generatedTicketUrl = null; setView('attendeePortal');" class="mt-4 bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg transition-colors">
                                             Close Ticket Preview
                                         </button>
                                     </div>
@@ -525,16 +528,15 @@
             contentArea.innerHTML = htmlContent;
 
             // --- Post-render QR code generation ---
-            if (currentView === 'attendeePortal' && loggedInUser && currentEvent && currentEvent.registeredAttendees.includes(loggedInUser.id)) {
-                setTimeout(() => { // Small timeout to ensure DOM element is ready
-                    const qrData = `Event:${currentEvent.name}|Date:${currentEvent.date}|User:${loggedInUser?.email || 'N/A'}|TicketID:${currentEvent.id}-${loggedInUser?.id}`;
-                    generateQRCode(qrData, 'attendee-ticket-qrcode-display', 200); // Smaller size for preview
+            // Only generate QR code if generatedTicketUrl exists and the relevant div is present
+            if (generatedTicketUrl && currentView === 'attendeePortal' && document.getElementById('attendee-ticket-qrcode-display')) {
+                setTimeout(() => { 
+                    generateQRCode(generatedTicketUrl, 'attendee-ticket-qrcode-display', 200); 
                 }, 0);
             }
-            if (currentView === 'eventDetails' && loggedInUser && currentEvent && currentEvent.registeredAttendees.includes(loggedInUser.id)) {
-                setTimeout(() => { // Small timeout to ensure DOM element is ready
-                    const qrData = `Event:${currentEvent.name}|Date:${currentEvent.date}|User:${loggedInUser?.email || 'N/A'}|TicketID:${currentEvent.id}-${loggedInUser?.id}`;
-                    generateQRCode(qrData, 'event-details-qrcode-display', 256); // Larger size for details page
+            if (generatedTicketUrl && currentView === 'eventDetails' && document.getElementById('event-details-qrcode-display')) {
+                setTimeout(() => { 
+                    generateQRCode(generatedTicketUrl, 'event-details-qrcode-display', 256); 
                 }, 0);
             }
 
@@ -961,10 +963,11 @@
                 const ticketUrl = data.ticketUrl;
 
                 if (ticketUrl) {
+                    generatedTicketUrl = ticketUrl; // Store the URL for QR code generation
                     showAlert('Ticket Ready!', 'Your ticket is ready. Clicking OK will open the download.');
                     window.open(ticketUrl, '_blank'); // This will trigger the download due to S3 Content-Disposition
-                    currentEvent = event; 
-                    renderUI(); 
+                    currentEvent = event; // Keep event context for QR code display
+                    renderUI(); // Re-render to display the QR code
                 } else {
                     throw new Error('No ticket URL received from backend.');
                 }
@@ -982,6 +985,12 @@
 
         const viewEventDetails = (id) => {
             currentEvent = events.find(e => e.id === id);
+            // If already registered and a ticket URL was generated previously, show QR
+            if (loggedInUser && currentEvent && currentEvent.registeredAttendees.includes(loggedInUser.id) && generatedTicketUrl) {
+                // Do nothing, generatedTicketUrl will be picked up by renderUI
+            } else {
+                generatedTicketUrl = null; // Clear if not registered or no ticket yet
+            }
             setView('eventDetails');
         };
 
