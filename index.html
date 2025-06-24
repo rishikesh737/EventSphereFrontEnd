@@ -753,15 +753,18 @@
                         return; // Stop execution
                     }
 
-                    // --- Extract user name ---
-                    let userName = payload.email; // Default to email
-                    if (payload.given_name) {
+                    // --- Extract user name (enhanced logic) ---
+                    let userName = 'User'; // Default to a generic "User"
+                    if (payload.given_name && payload.family_name) {
+                        userName = `${payload.given_name} ${payload.family_name}`;
+                    } else if (payload.given_name) {
                         userName = payload.given_name;
-                        if (payload.family_name) {
-                            userName += ' ' + payload.family_name;
-                        }
-                    } else if (payload['cognito:username']) { // Fallback to cognito:username if no given_name
+                    } else if (payload.preferred_username) { // Try preferred_username next
+                        userName = payload.preferred_username;
+                    } else if (payload['cognito:username']) { // Fallback to cognito:username
                         userName = payload['cognito:username'];
+                    } else if (payload.email) { // Fallback to email if no name attributes
+                        userName = payload.email;
                     }
 
 
@@ -894,7 +897,8 @@
                 events = data.events || data; 
                 console.log('Fetched events successfully:', events);
                 renderUI(); 
-            } catch (error) {
+            }
+            catch (error) {
                 console.error('Error fetching events:', error);
                 showAlert('Error', `Failed to load events from backend: ${error.message}. Please check your API Gateway URL and Lambda permissions.`);
                 events = []; // Clear events on fetch error
