@@ -36,10 +36,10 @@ Stores:
 - Embedded **QR codes** for validation at entry points.  
 
 ### 🔹 Hosting & Storage  
-- Frontend hosted via **AWS Amplify** or **S3 + CloudFront**.  
+- Frontend hosted via **AWS Amplify** .  
 - Ticket PDFs stored in **S3 with pre-signed links** for secure downloads.  
 
-### 🔹 (Optional) Payment Integration  
+### 🔹 Payment Integration  
 - **Stripe (test mode)** for simulated transactions.  
 
 ---
@@ -53,7 +53,7 @@ Stores:
 - ✅ **Admin & user portals (live-hosted)**  
 - ✅ **DynamoDB schema + AWS Lambda ticketing logic**  
 - ✅ **Workflow & architecture diagrams**  
-- ✅ **Cost breakdown + scalability plan**  
+
 
 ---
 
