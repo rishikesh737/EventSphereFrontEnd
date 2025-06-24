@@ -1,4 +1,4 @@
-[⚠️ Suspicious Content] <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -150,7 +150,7 @@
         let loggedInUser = null; 
         let events = []; 
         let currentEvent = null; 
-        let currentView = 'home'; 
+        let currentView = 'home'; // Default view
         let editingEventId = null; 
         let form = { name: '', date: '', description: '', location: '', organizerId: '' }; 
 
@@ -280,16 +280,15 @@
 
             switch (currentView) {
                 case 'home':
-                    showFooter = true; // Show footer on home page
-                    htmlContent = `
-                        <div class="flex flex-col items-center justify-center text-center py-16 px-4 content-card">
-                            <h2 class="text-5xl font-extrabold mb-6 drop-shadow-lg text-gray-900">Welcome to EventSphere!</h2>
-                            <p class="text-xl text-gray-700 mb-10 max-w-2xl">
-                                Your complete platform for creating, managing, and attending events.
-                                Seamlessly organize and enjoy memorable experiences.
-                            </p>
-                            ${loggedInUser ? `
-                                <p class="text-lg text-gray-700">You are logged in as ${loggedInUser.email}.</p>
+                    // Decide whether to show login/signup or dashboard/tutorial on home based on login status
+                    if (loggedInUser) {
+                        htmlContent = `
+                            <div class="flex flex-col items-center justify-center text-center py-16 px-4 content-card">
+                                <h2 class="text-5xl font-extrabold mb-6 drop-shadow-lg text-gray-900">Welcome, ${loggedInUser.email}!</h2>
+                                <p class="text-xl text-gray-700 mb-10 max-w-2xl">
+                                    Your complete platform for creating, managing, and attending events.
+                                    Seamlessly organize and enjoy memorable experiences.
+                                </p>
                                 <div class="flex flex-col sm:flex-row gap-6 mt-6">
                                     <button onclick="handleHomeButtonClick()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-full shadow-lg transition-all duration-300 transform hover:scale-105 flex items-center justify-center gap-2">
                                         Go to your Dashboard
@@ -298,7 +297,17 @@
                                         ${getIconSVG('book-open', 24)} Tutorial
                                     </button>
                                 </div>
-                            ` : `
+                            </div>
+                        `;
+                    } else {
+                        showFooter = true; // Show footer on home page if not logged in
+                        htmlContent = `
+                            <div class="flex flex-col items-center justify-center text-center py-16 px-4 content-card">
+                                <h2 class="text-5xl font-extrabold mb-6 drop-shadow-lg text-gray-900">Welcome to EventSphere!</h2>
+                                <p class="text-xl text-gray-700 mb-10 max-w-2xl">
+                                    Your complete platform for creating, managing, and attending events.
+                                    Seamlessly organize and enjoy memorable experiences.
+                                </p>
                                 <div class="flex flex-col sm:flex-row gap-6">
                                     <button onclick="redirectToCognitoLogin()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-full shadow-lg transition-all duration-300 transform hover:scale-105 flex items-center justify-center gap-2">
                                         ${getIconSVG('login', 24)} Login
@@ -307,9 +316,9 @@
                                         ${getIconSVG('user-plus', 24)} Sign Up
                                     </button>
                                 </div>
-                            `}
-                        </div>
-                    `;
+                            </div>
+                        `;
+                    }
                     break;
                 case 'signupRoleSelection':
                     showFooter = true; // Show footer on signup selection page
@@ -580,7 +589,7 @@
                             </div>
                             <div class="text-center mt-8">
                                 <button onclick="handleHomeButtonClick()" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-5 rounded-lg transition-colors">
-                                    Back to Dashboard
+                                    Back to Home
                                 </button>
                             </div>
                         </div>
@@ -640,40 +649,18 @@
         `;
 
         // --- View Navigation ---
-        // handleHomeButtonClick: Directs to dashboard if logged in, otherwise to home.
+        // handleHomeButtonClick: Always directs to the main 'home' view which then decides its content
         const handleHomeButtonClick = () => {
-            if (loggedInUser) {
-                if (loggedInUser.role === 'organizer') {
-                    setView('organizerDashboard');
-                } else if (loggedInUser.role === 'attendee') {
-                    setView('attendeePortal');
-                } else { // Should ideally not happen if role assigned
-                    setView('chooseRoleAfterLogin');
-                }
-            } else {
-                setView('home');
-            }
-            // Ensure events are re-fetched if navigating back to dashboard view
-            if (loggedInUser && (currentView === 'organizerDashboard' || currentView === 'attendeePortal')) {
-                fetchEventsFromAPI();
-            }
+            setView('home'); // Always go to the 'home' view
         };
 
         // setView now manages history state to prevent direct back to Cognito login
         const setView = (viewName) => {
             currentView = viewName;
-            // Push state only if navigating to a "main" section that should be in browser history
-            // Avoid pushing for modals or temporary states.
-            const path = window.location.pathname; // Base path
-            const newUrl = `${path}#${viewName}`; // Append view as hash
-            
-            // To prevent back button going to Cognito login, we use replaceState after initial login
-            // For internal app navigation, pushState can be used, but for a simple SPA
-            // where we don't want deep linking to internal views, managing view state is simpler.
-            // The key is that `parseCognitoTokens` uses `replaceState` after initial login.
-            // For simple view changes, just re-rendering the content is sufficient.
-            // The browser's back button will still traverse the browser's history,
-            // which should now be cleaner due to `replaceState` on login.
+            // For general internal app navigation, we're not using pushState here,
+            // as the `parseCognitoTokens` already does a `replaceState` to clean the history.
+            // This means the browser's back button should simply go back through the clean history
+            // that the app created internally (or the page before the initial login).
             renderUI(); 
         };
 
@@ -761,15 +748,11 @@
                         showAlert('Login Successful', `Welcome, ${loggedInUser.email}!`);
                     }
 
-                    if (loggedInUser.role === 'unassigned') {
-                        setView('chooseRoleAfterLogin');
-                    } else if (loggedInUser.role === 'organizer') {
-                        setView('organizerDashboard');
-                        fetchEventsFromAPI(); 
-                    } else { // Must be attendee
-                        setView('attendeePortal');
-                        fetchEventsFromAPI(); 
-                    }
+                    // --- NEW BEHAVIOR: Always go to 'home' first after login/re-auth ---
+                    setView('home'); 
+                    // Fetch events once logged in, for dashboards
+                    fetchEventsFromAPI(); 
+
                 } catch (e) {
                     console.error("Error parsing ID token:", e);
                     showAlert('Authentication Error', 'Could not parse user session. Please try logging in again.');
@@ -827,23 +810,16 @@
                     throw new Error(`Failed to assign role: ${response.status} ${errorData.message || response.statusText}`);
                 }
                 
-                // --- FIX: Update local loggedInUser role and redirect directly ---
                 loggedInUser.role = role; // Update the frontend user object with the new role
-                showAlert('Role Assigned!', `You are now an ${role}.`); // Removed re-login instruction
+                showAlert('Role Assigned!', `You are now an ${role}.`); 
                 
-                // Immediately navigate to the correct dashboard based on the newly assigned role
-                if (loggedInUser.role === 'organizer') {
-                    setView('organizerDashboard');
-                    fetchEventsFromAPI(); // Fetch events specific to organizer
-                } else { // Must be attendee
-                    setView('attendeePortal');
-                    fetchEventsFromAPI(); // Fetch all events for attendee
-                }
+                // --- NEW BEHAVIOR: Go to 'home' after role assignment ---
+                setView('home'); 
+                fetchEventsFromAPI(); 
 
             } catch (error) {
                 console.error('Error assigning role:', error);
                 showAlert('Role Assignment Failed', `Could not assign role: ${error.message}. Please try again or contact support.`);
-                // If assignment fails, keep them on role selection page or redirect to home.
                 setView('chooseRoleAfterLogin'); 
             }
         };
@@ -852,24 +828,21 @@
         const fetchEventsFromAPI = async () => {
             if (!loggedInUser) {
                 console.warn('Cannot fetch events: No user logged in. Displaying mock data.');
-                loadInitialMockData();
+                loadInitialMockData(); // Only loads mock data if not logged in
                 return; 
             }
 
             if (!API_GATEWAY_EVENTS_URL || API_GATEWAY_EVENTS_URL.includes('YOUR_API_GATEWAY_INVOKE_URL_HERE')) {
                 showAlert('Configuration Error', 'The API_GATEWAY_EVENTS_URL is not configured. Please update it in index.html.');
                 console.error("API_GATEWAY_EVENTS_URL is not set! Please replace 'YOUR_API_GATEWAY_INVOKE_URL_HERE' with your actual API Gateway Invoke URL.");
-                loadInitialMockData(); // Fallback to mock data if API URL is missing
+                // If API URL is missing, we must NOT try to fetch. Maybe load mock events for logged-in user too if needed.
+                // For now, if logged in but API is bad, it will just show empty dashboard.
+                events = []; // Clear events if API URL is bad
+                renderUI();
                 return;
             }
 
             try {
-                // Do not show "Loading Events" alert every time fetchEventsFromAPI is called,
-                // only if it's the initial load or explicitly navigating.
-                if (currentView === 'organizerDashboard' || currentView === 'attendeePortal') {
-                    // Only show alert if it's the primary action for the view
-                }
-                
                 const response = await fetch(API_GATEWAY_EVENTS_URL, {
                     method: 'GET',
                     headers: {
@@ -889,8 +862,9 @@
                 renderUI(); 
             } catch (error) {
                 console.error('Error fetching events:', error);
-                showAlert('Error', `Failed to load events from backend: ${error.message}. Please check your API Gateway URL and Lambda permissions. Displaying mock data.`);
-                loadInitialMockData();
+                showAlert('Error', `Failed to load events from backend: ${error.message}. Please check your API Gateway URL and Lambda permissions.`);
+                events = []; // Clear events on fetch error
+                renderUI();
             }
         };
 
@@ -1027,7 +1001,7 @@
                 }
                 // Use a confirm dialog for deregistration
                 showConfirm('Confirm De-registration', `Are you sure you want to de-register from "${eventToModify.name}"?`, async () => {
-                    // User confirmed, proceed with API call
+                     // User confirmed, proceed with API call
                     updatedAttendees = updatedAttendees.filter(id => id !== loggedInUser.id);
                     try {
                         showAlert('De-registering', 'Processing your de-registration...');
