@@ -742,6 +742,11 @@
                     const payload = JSON.parse(atob(idToken.split('.')[1])); 
                     const now = Math.floor(Date.now() / 1000); // Current time in seconds since epoch
                     
+                    // --- IMPORTANT: Log the full payload to debug missing attributes ---
+                    console.log("--- ID Token Payload (Raw) ---");
+                    console.log(payload);
+                    console.log("-------------------------------");
+
                     // Check if token is expired (giving a small grace period)
                     if (payload.exp < (now - 60)) { // 60 seconds grace period
                         console.warn('Stored ID token is expired. User needs to re-authenticate.');
@@ -753,18 +758,34 @@
                         return; // Stop execution
                     }
 
-                    // --- Extract user name (enhanced logic) ---
-                    let userName = 'User'; // Default to a generic "User"
-                    if (payload.given_name && payload.family_name) {
-                        userName = `${payload.given_name} ${payload.family_name}`;
-                    } else if (payload.given_name) {
-                        userName = payload.given_name;
-                    } else if (payload.preferred_username) { // Try preferred_username next
+                    // Helper to check if a string looks like a UUID
+                    const isUUID = (str) => typeof str === 'string' && /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(str);
+
+                    // --- Extract user name (FINAL, most robust logic) ---
+                    let userName = 'User'; // Default to a generic "User" if nothing else found
+
+                    // Prioritize standard name claims, then Cognito-specific, then email, then sub
+                    // Check if the attribute exists AND doesn't look like a UUID
+                    if (payload.name && !isUUID(payload.name)) { // Standard JWT 'name' claim for full name (often concatenated first + last)
+                        userName = payload.name;
+                    } else if (payload.preferred_username && !isUUID(payload.preferred_username)) { // Preferred username
                         userName = payload.preferred_username;
-                    } else if (payload['cognito:username']) { // Fallback to cognito:username
+                    } else if (payload.given_name && payload.family_name) {
+                        // Only combine if both are present and not UUIDs
+                        if (!isUUID(payload.given_name) && !isUUID(payload.family_name)) {
+                            userName = `${payload.given_name} ${payload.family_name}`;
+                        } else if (payload.given_name && !isUUID(payload.given_name)) { // If only given_name is good
+                            userName = payload.given_name;
+                        }
+                    } else if (payload.given_name && !isUUID(payload.given_name)) { // Fallback to just given name if family name is missing or bad
+                        userName = payload.given_name;
+                    } else if (payload['cognito:username'] && !isUUID(payload['cognito:username'])) { // Cognito username
                         userName = payload['cognito:username'];
-                    } else if (payload.email) { // Fallback to email if no name attributes
-                        userName = payload.email;
+                    } else if (payload.email) { // Email as a last resort for display, take part before @
+                        userName = payload.email.split('@')[0]; 
+                    } else if (payload.sub) { // Fallback to sub if absolutely nothing else can be found
+                        userName = payload.sub; 
+                        console.warn("Falling back to user ID (sub) for display name. This indicates that 'given_name', 'family_name', 'preferred_username', or 'name' attributes are not populated or readable from your Cognito User Pool's ID token. Please verify your Cognito App Client's 'Attribute read permissions' for these attributes and ensure users provide them during signup.");
                     }
 
 
