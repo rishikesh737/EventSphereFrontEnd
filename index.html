@@ -266,10 +266,10 @@
                 // If not logged in, show Login and Sign Up
                 authButtonsDiv.innerHTML = `
                     <button onclick="redirectToCognitoLogin()" class="nav-btn" title="Login">
-                        ${getIconSVG('login', 20)} <span class="hidden sm:inline">Login</span>
+                        ${getIconSVG('login', 24)} <span class="hidden sm:inline">Login</span>
                     </button>
                     <button onclick="setView('signupRoleSelection')" class="nav-btn" title="Sign Up">
-                        ${getIconSVG('user-plus', 20)} <span class="hidden sm:inline">Sign Up</span>
+                        ${getIconSVG('user-plus', 24)} <span class="hidden sm:inline">Sign Up</span>
                     </button>
                 `;
             }
@@ -344,7 +344,13 @@
                         </div>
                     `;
                     break;
-                case 'chooseRoleAfterLogin': // New view for role selection AFTER initial login
+                case 'chooseRoleAfterLogin': // View for role selection AFTER initial login
+                    // This view should only be shown if loggedInUser exists and has 'unassigned' role
+                    if (!loggedInUser || loggedInUser.role !== 'unassigned') {
+                        // If role is already assigned, redirect to home/dashboard
+                        handleGoToDashboard(); 
+                        return; // Exit renderUI to prevent showing the role selection
+                    }
                     htmlContent = `
                         <div class="max-w-md mx-auto p-8 content-card text-center">
                             <h2 class="text-3xl font-bold mb-8 text-gray-900">Welcome, ${loggedInUser?.name || 'New User'}!</h2>
@@ -806,8 +812,13 @@
                         showAlert('Login Successful', `Welcome, ${loggedInUser.name}!`);
                     }
 
-                    // Always go to 'home' first after login/re-auth
-                    setView('home'); 
+                    // --- NEW LOGIC FOR ROLE SELECTION FLOW ---
+                    if (loggedInUser.role === 'unassigned') {
+                        setView('chooseRoleAfterLogin'); // Immediately go to role selection if unassigned
+                    } else {
+                        setView('home'); // Otherwise, go to the main home page
+                    }
+                    
                     // Fetch events once logged in, for dashboards
                     fetchEventsFromAPI(); 
 
@@ -871,14 +882,14 @@
                 loggedInUser.role = role; // Update the frontend user object with the new role
                 showAlert('Role Assigned!', `You are now an ${role}.`); 
                 
-                // Go to 'home' after role assignment
-                setView('home'); 
+                // --- NEW LOGIC: After successful role assignment, go directly to dashboard ---
+                handleGoToDashboard(); 
                 fetchEventsFromAPI(); 
 
             } catch (error) {
                 console.error('Error assigning role:', error);
                 showAlert('Role Assignment Failed', `Could not assign role: ${error.message}. Please try again or contact support.`);
-                setView('chooseRoleAfterLogin'); 
+                setView('chooseRoleAfterLogin'); // Keep them on role selection if it fails
             }
         };
 
@@ -974,7 +985,7 @@
 
                 showAlert('Success', `Event ${editingEventId ? 'updated' : 'created'} successfully!`);
                 editingEventId = null; 
-                form = { name: '', date: '', description: '', location: '', organizerId: '' }; 
+                form = { name: '', date: '', description: '', location: '' }; 
                 await fetchEventsFromAPI(); 
                 setView('organizerDashboard'); 
             } catch (error) {
@@ -1046,6 +1057,7 @@
             let updatedAttendees = [...eventToModify.registeredAttendees]; // Create a copy
             const isRegistered = updatedAttendees.includes(loggedInUser.id);
 
+            // Mock payment confirmation is always shown for 'register' action
             if (actionType === 'register') {
                 if (isRegistered) {
                     showAlert('Already Registered', 'You are already registered for this event.');
@@ -1064,13 +1076,14 @@
                     updatedAttendees = updatedAttendees.filter(id => id !== loggedInUser.id);
                     try {
                         showAlert('De-registering', 'Processing your de-registration...');
+                        // Send ONLY registeredAttendees for attendee updates to the backend
                         const response = await fetch(`${API_GATEWAY_EVENTS_URL}/${eventId}`, { 
                             method: 'PUT',
                             headers: {
                                 'Content-Type': 'application/json',
                                 'Authorization': `Bearer ${loggedInUser.idToken}` 
                             },
-                            body: JSON.stringify({ registeredAttendees: updatedAttendees })
+                            body: JSON.stringify({ registeredAttendees: updatedAttendees }) // Only send this specific field
                         });
 
                         if (!response.ok) {
@@ -1097,13 +1110,14 @@
             // This part runs only for 'register' action if it's not already registered
             try {
                 showAlert('Registering for Event', 'Processing your registration...');
+                // Send ONLY registeredAttendees for attendee updates to the backend
                 const response = await fetch(`${API_GATEWAY_EVENTS_URL}/${eventId}`, { 
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${loggedInUser.idToken}` 
                     },
-                    body: JSON.stringify({ registeredAttendees: updatedAttendees })
+                    body: JSON.stringify({ registeredAttendees: updatedAttendees }) // Only send this specific field
                 });
 
                 if (!response.ok) {
