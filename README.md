@@ -1,4 +1,4 @@
-# EventSphere 🎟️  
+# EventSphere 🎟️  (Note: This site will be decommissioned as backend AWS services are removed. )
 ### A Complete Event Management Platform on AWS  
 
 EventSphere is a robust event management system designed to enable organizers to create events, manage attendees, issue digital tickets, and track event analytics—all powered by AWS Cloud services.
