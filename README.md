@@ -56,10 +56,13 @@ Stores:
 
 
 ---
+## Project images 
 
-## 🚀 Getting Started  
-
-### 1️⃣ **Clone the Repository**  
-```bash
-git clone https://github.com/YOUR_GITHUB_USERNAME/EventSphere.git
-cd EventSphere
+![Image](https://github.com/user-attachments/assets/299f0483-ce6b-409f-a530-eb1ece48b57d)
+![Image](https://github.com/user-attachments/assets/3f319a50-0e63-4db4-9bd6-646ddf94fd91)
+![Image](https://github.com/user-attachments/assets/05e3e90a-4614-45b8-b043-5c7a3d70fbe2)
+![Image](https://github.com/user-attachments/assets/f5a03d61-76ad-4b5f-aec4-12b3ac70946b)
+![Image](https://github.com/user-attachments/assets/7d43e004-b05e-400d-b274-0f51377885a1)
+![Image](https://github.com/user-attachments/assets/08ce31fa-fd76-4202-90e6-8755811a4d3d)
+![Image](https://github.com/user-attachments/assets/4f4b071a-87d0-45fc-b363-6385533cdf80)
+![Image](https://github.com/user-attachments/assets/d5698eb6-4e7b-42d9-b424-a0b87dfe89a8)
